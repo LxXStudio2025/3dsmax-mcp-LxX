@@ -48,7 +48,9 @@ class MaxError(ToolError):
 
     def __str__(self) -> str:  # keep the classification visible to the client
         text = super().__str__()
-        return f"{text}\n[max_error code={self.code} retryable={str(self.retryable).lower()}]"
+        suffix = f"[max_error code={self.code} retryable={str(self.retryable).lower()}]"
+        # A no-arg construction would otherwise leave a dangling blank line.
+        return f"{text}\n{suffix}" if text else suffix
 
 
 class MaxNotConnected(MaxError):

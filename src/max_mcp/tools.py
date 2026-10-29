@@ -25,6 +25,34 @@ from .bridge import Bridge, MaxError
 BRIDGE = Bridge(port=int(os.environ.get("MAXMCP_PORT", "47100")))
 SHOT_DIR = os.path.join(tempfile.gettempdir(), "max-mcp")
 
+_SWEPT = False
+
+
+def _sweep_temp(max_age_hours: float = 6.0) -> None:
+    """Remove py_*.py / py_*.json that a previous session could not delete.
+
+    A timed-out max_python gives up *before* Max writes the result file, so the
+    call cannot delete it -- and its random name means nothing will ever look at
+    that path again. Collect them once per process, by age, on first use.
+    """
+    global _SWEPT
+    if _SWEPT:
+        return
+    _SWEPT = True
+    try:
+        cutoff = time.time() - max_age_hours * 3600.0
+        for name in os.listdir(SHOT_DIR):
+            if not (name.startswith("py_") and name.endswith((".py", ".json"))):
+                continue
+            fp = os.path.join(SHOT_DIR, name)
+            try:
+                if os.path.getmtime(fp) < cutoff:
+                    os.remove(fp)
+            except OSError:
+                pass
+    except OSError:
+        pass
+
 
 # ---------------------------------------------------------------------------
 # MAXScript literal helpers
@@ -573,6 +601,7 @@ def max_python(code: str, timeout_seconds: float = 30.0) -> Any:
     import uuid
 
     os.makedirs(SHOT_DIR, exist_ok=True)
+    _sweep_temp()
     rid = uuid.uuid4().hex[:12]
     script_path = os.path.join(SHOT_DIR, f"py_{rid}.py")
     out_path = os.path.join(SHOT_DIR, f"py_{rid}.json")
@@ -628,8 +657,6 @@ def max_python(code: str, timeout_seconds: float = 30.0) -> Any:
         fh.write(wrapper)
 
     p = script_path.replace("\\", "\\\\")
-    # Read the envelope inside the try so the finally can always clean up:
-    # a failed or timed-out run used to leave both .py and .json behind in %TEMP%.
     envelope = None
     try:
         call(f'python.ExecuteFile @"{p}"', timeout=timeout_seconds)
@@ -637,9 +664,19 @@ def max_python(code: str, timeout_seconds: float = 30.0) -> Any:
             with open(out_path, encoding="utf-8") as fh:
                 envelope = json.load(fh)
     finally:
-        for tmp in (script_path, out_path):
+        # The wrapper script is safe to drop immediately: Max has already read
+        # and compiled it.
+        try:
+            os.remove(script_path)
+        except OSError:
+            pass
+        # The result file is NOT. On a timeout Max is still running and writes
+        # out_path *after* we gave up; deleting it now only makes it reappear
+        # later as an orphan nobody will ever look at again. Delete it solely
+        # on the success path and let _sweep_temp() collect the rest.
+        if envelope is not None:
             try:
-                os.remove(tmp)
+                os.remove(out_path)
             except OSError:
                 pass
 
@@ -747,7 +784,10 @@ def max_check(expressions: list[str], timeout_seconds: float = 60.0) -> dict:
     SAMPLES ARE CLEANED UP. Expressions run against the live scene, so a probe
     like `(Box()).wirecolor` really does create a box. Everything that appears
     during the run is deleted afterwards and its name is reported under
-    `removed_side_effects`. Two consequences:
+    `removed_side_effects`. Anything that could NOT be deleted -- a locked node,
+    or one whose parent was already removed -- shows up under
+    `leftover_side_effects`; a non-empty list there means the scene is dirty and
+    you should say so instead of assuming the probe was free. Two consequences:
 
       * a probe whose whole point is to create something will not survive --
         check for the side effect by name in the `removed_side_effects` list
@@ -778,18 +818,36 @@ def max_check(expressions: list[str], timeout_seconds: float = 60.0) -> dict:
     # compares by reference, so a probe that renames an object is not mistaken
     # for a new one. undo off keeps the throwaway create/delete out of the
     # user's undo stack.
+    #
+    # delete can legitimately fail (deleting a parent sweeps its children, so a
+    # later iteration hits an already-dead node), which is why the try/catch
+    # stays -- but it must not swallow the failure silently. isValidNode after
+    # the attempt is what decides whether a name belongs in __removed (really
+    # gone) or __leftover (still standing, scene is polluted).
     script_parts.append(
         "    local __new = for o in (objects as array) where (findItem __before o == 0) collect o"
     )
-    script_parts.append("    local __removed = for o in __new collect o.name")
-    script_parts.append("    undo off ( for o in __new do ( try (delete o) catch () ) )")
-    script_parts.append("    #(__res, __removed)")
+    script_parts.append("    local __removed = #()")
+    script_parts.append("    local __leftover = #()")
+    script_parts.append("    local __nm")
+    script_parts.append("    undo off ( for o in __new do (")
+    script_parts.append("        if (isValidNode o) do (")
+    script_parts.append("            __nm = o.name")
+    script_parts.append("            try (delete o) catch ()")
+    script_parts.append(
+        "            if (isValidNode o) then (append __leftover __nm)"
+        " else (append __removed __nm)"
+    )
+    script_parts.append("        )")
+    script_parts.append("    ) )")
+    script_parts.append("    #(__res, __removed, __leftover)")
     script_parts.append(")")
     script = "\n".join(script_parts)
 
     raw = call(script, timeout=timeout_seconds)
     results = raw[0] if isinstance(raw, list) and raw else []
     removed = raw[1] if isinstance(raw, list) and len(raw) > 1 else []
+    leftover = raw[2] if isinstance(raw, list) and len(raw) > 2 else []
     out = []
     for i, expr in enumerate(expressions):
         entry = results[i] if isinstance(results, list) and i < len(results) else [False, "no result"]
@@ -800,6 +858,7 @@ def max_check(expressions: list[str], timeout_seconds: float = 60.0) -> dict:
         "checked": len(out),
         "results": out,
         "removed_side_effects": removed if isinstance(removed, list) else [],
+        "leftover_side_effects": leftover if isinstance(leftover, list) else [],
     }
 
 
