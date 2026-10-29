@@ -29,12 +29,26 @@ import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+from .compat import ToolError
 
-class MaxError(RuntimeError):
-    """Base for anything the Max side reports or fails to report."""
+
+class MaxError(ToolError):
+    """Base for anything the Max side reports or fails to report.
+
+    Subclasses `ToolError` on purpose. The MCP SDK treats any other exception as
+    a crash and withholds its text from the model: the client sees only
+    "Error executing tool <name>", which is exactly how the carefully worded
+    MaxBusy / MaxRestarted advice below used to disappear. Deriving from
+    ToolError marks these as *anticipated* failures, so `str(exc)` reaches the
+    agent and the server logs them without a traceback.
+    """
 
     code = "error"
     retryable = False
+
+    def __str__(self) -> str:  # keep the classification visible to the client
+        text = super().__str__()
+        return f"{text}\n[max_error code={self.code} retryable={str(self.retryable).lower()}]"
 
 
 class MaxNotConnected(MaxError):

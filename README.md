@@ -87,7 +87,7 @@ MCP 侧暴露 15 个工具，`maxctl` 是同一套能力在命令行上的入口
 | `max_python` | 在 Max 内跑 Python（逻辑用，场景操作别用） |
 | `max_api` | 查某个类声明了哪些成员及类型 |
 | `max_api_search` | 在全量 API 快照里搜类名/属性 |
-| `max_check` | 试跑表达式，确认属性能不能用 |
+| `max_check` | 试跑表达式，确认能不能用（自动清理副产物） |
 | `max_doc` | 搜本地 MAXScript 参考 |
 
 **写脚本前先查 API**：`max_api "Editable_Poly"` 看有什么，

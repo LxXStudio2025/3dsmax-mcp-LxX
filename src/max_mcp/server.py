@@ -35,6 +35,17 @@ bridge, six confident assumptions were wrong (BooleanClass vs Boolean,
 formattedPrint format strings, getNodeByName default args, node.layer,
 byte[].Length, case on strings). Every one was caught by running it.
 
+max_check is safe to call on a live scene: expressions really execute, but
+anything they create is deleted afterwards and reported under
+removed_side_effects. So a probe like `(Box()).wirecolor` costs you nothing.
+The one thing it cannot preserve is an object the probe was meant to create --
+if you need that, use max_create_object or max_eval instead.
+
+Errors carry a classification suffix, e.g. `[max_error code=busy
+retryable=false]`. Read it before retrying: code=busy and code=restarted both
+mean the script MAY ALREADY HAVE RUN and changed the scene -- inspect first,
+never retry blindly. code=not_connected is the only one that is safe to repeat.
+
 Known blind spot: max_api lists only members declared on the class. Node
 universals (name, pos, wirecolor, isHidden, parent, material) appear in no
 property list yet work fine -- use max_check for those.

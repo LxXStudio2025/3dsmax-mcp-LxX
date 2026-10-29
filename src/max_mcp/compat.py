@@ -11,12 +11,14 @@ from __future__ import annotations
 try:  # mcp >= 2.0
     from mcp.server.mcpserver import Image as Image
     from mcp.server.mcpserver import MCPServer as MCPServer
+    from mcp.server.mcpserver.exceptions import ToolError as ToolError
 
     SDK_MAJOR = 2
 except ImportError:  # pragma: no cover - mcp 1.x
     from mcp.server.fastmcp import FastMCP as MCPServer  # type: ignore[assignment]
     from mcp.server.fastmcp import Image as Image  # type: ignore[assignment]
+    from mcp.server.fastmcp.exceptions import ToolError as ToolError  # type: ignore[assignment]
 
     SDK_MAJOR = 1
 
-__all__ = ["MCPServer", "Image", "SDK_MAJOR"]
+__all__ = ["MCPServer", "Image", "ToolError", "SDK_MAJOR"]

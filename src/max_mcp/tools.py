@@ -628,18 +628,26 @@ def max_python(code: str, timeout_seconds: float = 30.0) -> Any:
         fh.write(wrapper)
 
     p = script_path.replace("\\", "\\\\")
+    # Read the envelope inside the try so the finally can always clean up:
+    # a failed or timed-out run used to leave both .py and .json behind in %TEMP%.
+    envelope = None
     try:
         call(f'python.ExecuteFile @"{p}"', timeout=timeout_seconds)
+        if os.path.isfile(out_path):
+            with open(out_path, encoding="utf-8") as fh:
+                envelope = json.load(fh)
     finally:
-        pass
+        for tmp in (script_path, out_path):
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
 
-    if not os.path.isfile(out_path):
+    if envelope is None:
         raise MaxError(
             "Python produced no result file. The interpreter may be unavailable "
             "in this Max -- verify with `maxctl eval 'python.Execute \"1\"'`."
         )
-    with open(out_path, encoding="utf-8") as fh:
-        envelope = json.load(fh)
     out = envelope.get("stdout") or ""
     err = envelope.get("stderr") or ""
     if not envelope.get("ok"):
@@ -728,7 +736,7 @@ def max_api(class_name: str, pattern: str = "*") -> dict:
     }
 
 
-def max_check(expressions: list[str]) -> dict:
+def max_check(expressions: list[str], timeout_seconds: float = 60.0) -> dict:
     """Try a list of MAXScript expressions and report which ones actually work.
 
     This is the counterpart to max_api's blind spot. Reflection cannot tell you
@@ -736,33 +744,63 @@ def max_check(expressions: list[str]) -> dict:
     in any property list -- but evaluation can. Run them before writing code
     that depends on them.
 
+    SAMPLES ARE CLEANED UP. Expressions run against the live scene, so a probe
+    like `(Box()).wirecolor` really does create a box. Everything that appears
+    during the run is deleted afterwards and its name is reported under
+    `removed_side_effects`. Two consequences:
+
+      * a probe whose whole point is to create something will not survive --
+        check for the side effect by name in the `removed_side_effects` list
+      * the comparison is by object identity, not name, so renaming is safe;
+        but objects created by *other* code during the same window would be
+        swept up too. That window is milliseconds; do not call max_check while
+        something else is building the scene.
+
     Args:
         expressions: MAXScript expressions to evaluate in order, e.g.
                      ["(Box()).wirecolor", "(Box()).custom_attr", "units.SystemType"].
+        timeout_seconds: how long to wait before giving up.
     """
     script_parts = [
         "(",
+        "    local __before = objects as array",
         "    local __res = #()",
+        "    local __r",
     ]
     for expr in expressions:
-        script_parts.append("    local __r = #(false, \"\")")
+        script_parts.append("    __r = #(false, \"\")")
         script_parts.append(
             f"    try ( ( {expr} ) ; __r = #(true, \"\") )"
             f" catch ( __r = #(false, (getCurrentException() as string)) )"
         )
         script_parts.append("    append __res __r")
-    script_parts.append("    __res")
+    # Identity diff, not name diff: `findItem` on an array of node values
+    # compares by reference, so a probe that renames an object is not mistaken
+    # for a new one. undo off keeps the throwaway create/delete out of the
+    # user's undo stack.
+    script_parts.append(
+        "    local __new = for o in (objects as array) where (findItem __before o == 0) collect o"
+    )
+    script_parts.append("    local __removed = for o in __new collect o.name")
+    script_parts.append("    undo off ( for o in __new do ( try (delete o) catch () ) )")
+    script_parts.append("    #(__res, __removed)")
     script_parts.append(")")
     script = "\n".join(script_parts)
 
-    raw = call(script, timeout=60)
+    raw = call(script, timeout=timeout_seconds)
+    results = raw[0] if isinstance(raw, list) and raw else []
+    removed = raw[1] if isinstance(raw, list) and len(raw) > 1 else []
     out = []
     for i, expr in enumerate(expressions):
-        entry = raw[i] if isinstance(raw, list) and i < len(raw) else [False, "no result"]
+        entry = results[i] if isinstance(results, list) and i < len(results) else [False, "no result"]
         ok = bool(entry[0]) if isinstance(entry, list) else False
         err = entry[1] if isinstance(entry, list) and len(entry) > 1 else ""
         out.append({"expression": expr, "ok": ok, "error": None if ok else err})
-    return {"checked": len(out), "results": out}
+    return {
+        "checked": len(out),
+        "results": out,
+        "removed_side_effects": removed if isinstance(removed, list) else [],
+    }
 
 
 def _api_index_path() -> str:
