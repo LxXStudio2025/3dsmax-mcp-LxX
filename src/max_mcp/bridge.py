@@ -130,6 +130,21 @@ class Bridge:
     def start(self) -> None:
         if self._httpd is not None:
             return
+        # Refuse to share the port instead of failing mysteriously later.
+        #
+        # On Windows SO_REUSEADDR (which HTTPServer sets) permits a second
+        # bind to a port that is already listening -- unlike Unix, where it
+        # only helps with TIME_WAIT. So `maxctl` used to bind alongside a
+        # running MCP connector, Max kept talking to whoever bound first, and
+        # the CLI reported "3ds Max never contacted the bridge" while Max was
+        # right there. Probing first turns that into an actionable message.
+        if self._port_in_use():
+            raise MaxError(
+                f"port {self.port} is already in use by another process -- most "
+                "likely a running max_mcp server (the MCP connector), or another "
+                "maxctl. Inside an MCP client just call the tools; from a shell "
+                "stop the connector first or pass --port <free port>."
+            )
         bridge = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -192,6 +207,14 @@ class Bridge:
             self._httpd.shutdown()
             self._httpd.server_close()
             self._httpd = None
+
+    def _port_in_use(self) -> bool:
+        """True if something is already accepting connections on our port."""
+        import socket
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.settimeout(0.3)
+            return probe.connect_ex((self.host, self.port)) == 0
 
     # --------------------------------------------------------------- queueing
 

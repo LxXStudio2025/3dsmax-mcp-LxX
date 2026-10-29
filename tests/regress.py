@@ -152,6 +152,7 @@ def run_case(port: int, mode: str, timeout: float, delay: float = 0.0):
     th.start()
     th.join()
     fake.stop_flag.set()
+    fake.join(timeout=2.0)
     br.stop()
     return out
 
@@ -159,7 +160,9 @@ def run_case(port: int, mode: str, timeout: float, delay: float = 0.0):
 def test_busy_vs_restarted() -> None:
     print("\n[2] busy vs restarted is decided by task pickup")
 
-    r = run_case(47197, "swallow", timeout=1)
+    # A separate port per case: reusing one lets a straggling fake-Max thread
+    # from the previous case poll the new bridge.
+    r = run_case(47190, "swallow", timeout=1)
     check(
         "taken but unanswered -> MaxBusy",
         isinstance(r.get("exc"), MaxBusy),
@@ -167,18 +170,18 @@ def test_busy_vs_restarted() -> None:
     )
     check("grace window was actually waited", r.get("secs", 0) >= 5.9, f"{r.get('secs'):.1f}s")
 
-    r = run_case(47197, "idle", timeout=1)
+    r = run_case(47191, "idle", timeout=1)
     check(
         "never picked up -> MaxRestarted",
         isinstance(r.get("exc"), MaxRestarted),
-        f"got {type(r.get('exc')).__name__}",
+        f"got {type(r.get('exc')).__name__} value={r.get('value')!r} secs={r.get('secs', 0):.1f}",
     )
 
 
 def test_grace_window() -> None:
     print("\n[3] a result arriving inside the grace window is a success")
     # Answers 2 s after a 1 s timeout: within the 5 s grace, so no error at all.
-    r = run_case(47197, "late", timeout=1, delay=2.0)
+    r = run_case(47192, "late", timeout=1, delay=2.0)
     check("late answer -> no exception", r.get("exc") is None, repr(r.get("exc")))
     check("late answer -> value returned", r.get("value") == "answered", repr(r.get("value")))
 
@@ -271,6 +274,39 @@ def test_sweep() -> None:
     check("stale py_*.json removed", not os.path.exists(stale))
 
 
+# ---------------------------------------------------------------------------
+#  7. port collisions are reported, not silently shared
+# ---------------------------------------------------------------------------
+
+
+def test_port_collision() -> None:
+    print("\n[7] a taken port is refused with an explanation")
+    first = Bridge(port=47197)
+    first.start()
+    try:
+        second = Bridge(port=47197)
+        try:
+            second.start()
+            check("second bridge on the same port raises", False, "no error")
+        except MaxError as exc:
+            check(
+                "second bridge on the same port raises",
+                "already in use" in str(exc),
+                str(exc)[:80],
+            )
+    finally:
+        first.stop()
+
+    free = Bridge(port=47196)
+    try:
+        free.start()
+        check("a free port still binds", True)
+    except MaxError as exc:
+        check("a free port still binds", False, str(exc))
+    finally:
+        free.stop()
+
+
 def main() -> int:
     test_error_semantics()
     test_busy_vs_restarted()
@@ -278,6 +314,7 @@ def main() -> int:
     test_max_check_script()
     test_file_guard()
     test_sweep()
+    test_port_collision()
 
     print("\nRESULT:", "PASS" if not FAILURES else f"{len(FAILURES)} FAILURE(S): {FAILURES}")
     return 0 if not FAILURES else 1
