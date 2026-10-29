@@ -1,0 +1,32 @@
+# --- Python ---
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# --- Crawled Autodesk documentation ---
+# NOT redistributed: the text is Autodesk's copyrighted material. Rebuild it
+# locally with tools/crawl_maxscript_docs.py instead.
+tools/docs/maxscript-2025/
+tools/docs/maxscript-2025-slim/
+tools/docs/maxscript-2016/
+
+# --- Runtime artefacts ---
+shot_*.png
+*.log
+crawl.log
+tests/*.json
+tests/probe_*.txt
+tests/bench_*.json
+api_index_*.txt
+
+# --- Editor / OS ---
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+
+# 本地开发笔记（含 13 个坑、测量数据、架构原理），不随仓库分发
+NOTES.md
