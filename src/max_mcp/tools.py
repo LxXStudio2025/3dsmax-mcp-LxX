@@ -782,8 +782,8 @@ def max_check(expressions: list[str], timeout_seconds: float = 60.0) -> dict:
     that depends on them.
 
     SAMPLES ARE CLEANED UP. Expressions run against the live scene, so a probe
-    like `(Box()).wirecolor` really does create a box. Everything that appears
-    during the run is deleted afterwards and its name is reported under
+    like `(Box()).wirecolor` really does create a box. Nodes created during the
+    run are deleted afterwards and their names come back under
     `removed_side_effects`. Anything that could NOT be deleted -- a locked node,
     or one whose parent was already removed -- shows up under
     `leftover_side_effects`; a non-empty list there means the scene is dirty and
@@ -791,21 +791,42 @@ def max_check(expressions: list[str], timeout_seconds: float = 60.0) -> dict:
 
       * a probe whose whole point is to create something will not survive --
         check for the side effect by name in the `removed_side_effects` list
-      * the comparison is by object identity, not name, so renaming is safe;
-        but objects created by *other* code during the same window would be
-        swept up too. That window is milliseconds; do not call max_check while
-        something else is building the scene.
+      * tracking is by scene callback (#nodeCreated), so it sees exactly what
+        the probe created -- no whole-scene scan, and no chance of mistaking a
+        pre-existing node for a new one
 
     Args:
         expressions: MAXScript expressions to evaluate in order, e.g.
                      ["(Box()).wirecolor", "(Box()).custom_attr", "units.SystemType"].
         timeout_seconds: how long to wait before giving up.
     """
+    # Catch new nodes with a scene callback instead of diffing the whole scene.
+    #
+    # The obvious approach -- snapshot `objects` and compare afterwards -- is
+    # O(N^2) in MAXScript (no hash tables) and measured at 30-120 s on a 50k
+    # object scene, i.e. unusable on exactly the files where a mistake is most
+    # expensive. #nodeCreated fires per created node and hands it over via
+    # notificationParam(), so the cost is O(k) where k is what the probe built
+    # (verified on 2016: the callback sees the new node itself, `$` does not).
+    #
+    # MAXScript has no try/finally, so the callback is torn down in three
+    # places: defensively before installing, on the normal path, and again if
+    # the guarded block throws. A leaked #nodeCreated callback would keep
+    # appending every future node into a global array forever.
     script_parts = [
         "(",
-        "    local __before = objects as array",
+        "    global __mcp_probe_new = #()",
+        "    __mcp_probe_new = #()",
         "    local __res = #()",
         "    local __r",
+        "    local __boom = \"\"",
+        "    try ( callbacks.removeScripts id:#mcpProbe ) catch ()",
+        # Must stay on ONE line: MAXScript ends the statement at the line break,
+        # so `callbacks.addScript #nodeCreated` followed by the callback string
+        # on the next line is a call with no arguments ("needs a string or
+        # fileName: argument"). Verified on 2016.
+        "    callbacks.addScript #nodeCreated \"append __mcp_probe_new (callbacks.notificationParam())\" id:#mcpProbe",
+        "    try (",
     ]
     for expr in expressions:
         script_parts.append("    __r = #(false, \"\")")
@@ -814,23 +835,12 @@ def max_check(expressions: list[str], timeout_seconds: float = 60.0) -> dict:
             f" catch ( __r = #(false, (getCurrentException() as string)) )"
         )
         script_parts.append("    append __res __r")
-    # Identity diff, not name diff: `findItem` on an array of node values
-    # compares by reference, so a probe that renames an object is not mistaken
-    # for a new one. undo off keeps the throwaway create/delete out of the
-    # user's undo stack.
-    #
-    # delete can legitimately fail (deleting a parent sweeps its children, so a
-    # later iteration hits an already-dead node), which is why the try/catch
-    # stays -- but it must not swallow the failure silently. isValidNode after
-    # the attempt is what decides whether a name belongs in __removed (really
-    # gone) or __leftover (still standing, scene is polluted).
-    script_parts.append(
-        "    local __new = for o in (objects as array) where (findItem __before o == 0) collect o"
-    )
+    script_parts.append("    ) catch ( __boom = getCurrentException() as string )")
+    script_parts.append("    try ( callbacks.removeScripts id:#mcpProbe ) catch ()")
     script_parts.append("    local __removed = #()")
     script_parts.append("    local __leftover = #()")
     script_parts.append("    local __nm")
-    script_parts.append("    undo off ( for o in __new do (")
+    script_parts.append("    undo off ( for o in __mcp_probe_new do (")
     script_parts.append("        if (isValidNode o) do (")
     script_parts.append("            __nm = o.name")
     script_parts.append("            try (delete o) catch ()")
@@ -840,7 +850,8 @@ def max_check(expressions: list[str], timeout_seconds: float = 60.0) -> dict:
     )
     script_parts.append("        )")
     script_parts.append("    ) )")
-    script_parts.append("    #(__res, __removed, __leftover)")
+    script_parts.append("    __mcp_probe_new = #()")
+    script_parts.append("    #(__res, __removed, __leftover, __boom)")
     script_parts.append(")")
     script = "\n".join(script_parts)
 
@@ -848,6 +859,7 @@ def max_check(expressions: list[str], timeout_seconds: float = 60.0) -> dict:
     results = raw[0] if isinstance(raw, list) and raw else []
     removed = raw[1] if isinstance(raw, list) and len(raw) > 1 else []
     leftover = raw[2] if isinstance(raw, list) and len(raw) > 2 else []
+    boom = raw[3] if isinstance(raw, list) and len(raw) > 3 else ""
     out = []
     for i, expr in enumerate(expressions):
         entry = results[i] if isinstance(results, list) and i < len(results) else [False, "no result"]
@@ -859,6 +871,7 @@ def max_check(expressions: list[str], timeout_seconds: float = 60.0) -> dict:
         "results": out,
         "removed_side_effects": removed if isinstance(removed, list) else [],
         "leftover_side_effects": leftover if isinstance(leftover, list) else [],
+        "harness_error": boom or None,
     }
 
 
