@@ -25,24 +25,30 @@ from .bridge import Bridge, MaxError
 BRIDGE = Bridge(port=int(os.environ.get("MAXMCP_PORT", "47100")))
 SHOT_DIR = os.path.join(tempfile.gettempdir(), "max-mcp")
 
+# Extensions that `save <bitmap>` can actually write. Used to reject a typo'd
+# name before the image bytes overwrite whatever was there.
+_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".bmp", ".tga", ".tif", ".tiff", ".exr"}
+
 _SWEPT = False
 
 
 def _sweep_temp(max_age_hours: float = 6.0) -> None:
-    """Remove py_*.py / py_*.json that a previous session could not delete.
+    """Remove py_*.py / py_*.json / shot_*.png a previous session could not delete.
 
     A timed-out max_python gives up *before* Max writes the result file, so the
     call cannot delete it -- and its random name means nothing will ever look at
-    that path again. Collect them once per process, by age, on first use.
+    that path again. Screenshots written by an older build were never removed at
+    all. Collect them once per process, by age, on first use.
     """
     global _SWEPT
     if _SWEPT:
         return
     _SWEPT = True
+    junk = (".py", ".json", ".png")
     try:
         cutoff = time.time() - max_age_hours * 3600.0
         for name in os.listdir(SHOT_DIR):
-            if not (name.startswith("py_") and name.endswith((".py", ".json"))):
+            if not (name.startswith(("py_", "shot_")) and name.endswith(junk)):
                 continue
             fp = os.path.join(SHOT_DIR, name)
             try:
@@ -1093,6 +1099,16 @@ def capture_to_file(
     """
     if out_path:
         path = os.path.abspath(out_path)
+        if os.path.isdir(path):
+            raise MaxError(f"out_path is a directory, not a file: {path}")
+        ext = os.path.splitext(path)[1].lower()
+        # `save __bmp` writes image bytes regardless of the name, so a typo'd
+        # extension silently destroys whatever text file was at that path.
+        if ext not in _IMAGE_EXT:
+            raise MaxError(
+                f"unsupported image extension {ext or '(none)'!r}; use one of "
+                + ", ".join(sorted(_IMAGE_EXT))
+            )
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     else:
         os.makedirs(SHOT_DIR, exist_ok=True)
@@ -1142,8 +1158,17 @@ def max_screenshot(render: bool = False, width: int = 1280, height: int = 720) -
     from .compat import Image
 
     path = capture_to_file(render=render, width=width, height=height)
-    with open(path, "rb") as fh:
-        data = fh.read()
+    # The bytes are read into memory for the MCP image content type, so the PNG
+    # on disk has no further use. This path is always a temp file: max_screenshot
+    # never passes out_path -- maxctl does that via capture_to_file directly.
+    try:
+        with open(path, "rb") as fh:
+            data = fh.read()
+    finally:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
     return Image(data=data, format="png")
 
 
@@ -1152,15 +1177,43 @@ def max_screenshot(render: bool = False, width: int = 1280, height: int = 720) -
 # ---------------------------------------------------------------------------
 
 
-def max_file_io(action: str, path: str, selected_only: bool = False) -> dict:
+def max_file_io(
+    action: str, path: str, selected_only: bool = False, overwrite: bool = False
+) -> dict:
     """Import, export, or merge geometry files (FBX / OBJ / MAX).
+
+    Export refuses to clobber an existing file unless `overwrite=True`. Exporting
+    over the .max you are currently working on, or over the source you imported
+    from, destroys it with no undo -- far too easy to do by accident, so the
+    default is to fail loudly instead.
 
     Args:
         action: "import" | "export" | "merge".
         path: absolute file path.
         selected_only: export only the current selection.
+        overwrite: allow export to replace an existing file.
     """
     act = (action or "").lower().strip()
+    if act not in ("import", "export", "merge"):
+        raise ValueError("action must be import | export | merge")
+
+    target = os.path.abspath(path)
+    # MAXScript's doesFileExist() returns true for DIRECTORIES as well, so the
+    # guard inside the snippet cannot tell a folder from a file. Check here.
+    if os.path.isdir(target):
+        raise MaxError(f"path is a directory, not a file: {target}")
+    if act == "export":
+        if os.path.exists(target) and not overwrite:
+            raise MaxError(
+                f"refusing to overwrite an existing file: {target}\n"
+                "Pass overwrite=true to replace it deliberately."
+            )
+        parent = os.path.dirname(target)
+        if parent and not os.path.isdir(parent):
+            raise MaxError(f"target directory does not exist: {parent}")
+    elif not os.path.isfile(target):
+        raise MaxError(f"file not found: {target}")
+
     if act == "import":
         script = f"""(
     local __p = {mxs_str(path)}

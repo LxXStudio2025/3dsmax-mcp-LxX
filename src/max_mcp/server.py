@@ -23,8 +23,13 @@ thread, and posts the result back. Consequences you must respect:
 2. Max executes one thing at a time on its UI thread. A long script freezes
    Max's UI until it finishes and cannot be cancelled from here -- the human
    has to press ESC in Max. Keep individual calls under a few seconds.
-3. Nothing is saved. The scene is only modified in memory; ask the user before
-   saving, and there is deliberately no save tool.
+   If a call times out, THE SCRIPT KEEPS RUNNING inside Max: the tool returns
+   while the scene is still being modified. That is the whole reason the busy /
+   restarted errors say "inspect before retrying". A timeout never means
+   "nothing happened".
+3. The scene document is never saved: there is deliberately no save tool, and
+   .max files stay untouched on disk. max_file_io does write files (export), so
+   "not saved" applies to the scene, not to exports you explicitly request.
 
 BEFORE writing any MAXScript, verify the API instead of recalling it:
   max_api "Box"                  -> members the class declares + their types
@@ -35,11 +40,10 @@ bridge, six confident assumptions were wrong (BooleanClass vs Boolean,
 formattedPrint format strings, getNodeByName default args, node.layer,
 byte[].Length, case on strings). Every one was caught by running it.
 
-max_check is safe to call on a live scene: expressions really execute, but
-anything they create is deleted afterwards and reported under
-removed_side_effects. So a probe like `(Box()).wirecolor` costs you nothing.
-The one thing it cannot preserve is an object the probe was meant to create --
-if you need that, use max_create_object or max_eval instead.
+max_check cleans up after itself, but only for NODES IT CREATED. Probe freely
+for "does this property exist" -- `(Box()).wirecolor` costs you nothing. It does
+NOT undo property assignments, deletions, or file writes a probe performed, so
+never point it at destructive code and assume the cleanup makes it safe.
 
 Errors carry a classification suffix, e.g. `[max_error code=busy
 retryable=false]`. Read it before retrying: code=busy and code=restarted both
