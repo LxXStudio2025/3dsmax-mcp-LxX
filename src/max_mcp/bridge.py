@@ -91,7 +91,7 @@ _LATE_GRACE_S = 5.0
 
 
 class _Task:
-    __slots__ = ("id", "script", "event", "ok", "data", "error", "cancelled")
+    __slots__ = ("id", "script", "event", "ok", "data", "error", "cancelled", "completed")
 
     def __init__(self, script: str) -> None:
         self.id = uuid.uuid4().hex
@@ -101,6 +101,10 @@ class _Task:
         self.data = None
         self.error = None
         self.cancelled = False
+        # Set under _lock the moment a result arrives, before the payload is
+        # even parsed. Lets a timing-out caller tell "Max answered, still
+        # decoding" apart from "Max never answered".
+        self.completed = False
 
 
 class Bridge:
@@ -197,15 +201,23 @@ class Bridge:
                 task = self._pending.get_nowait()
             except queue.Empty:
                 return None
-            if task.cancelled:
-                continue
+            # The cancelled check and the _inflight write share one lock
+            # acquisition. Reading `cancelled` outside the lock left a window
+            # where a task was already being handed to Max but not yet visible
+            # in _inflight, so a timing-out caller saw "never taken".
             with self._lock:
+                if task.cancelled:
+                    continue
                 self._inflight[task.id] = task
             return task
 
     def _complete(self, task_id: str, raw: bytes) -> None:
         with self._lock:
             task = self._inflight.pop(task_id, None)
+            if task is not None:
+                # Marked inside the lock, before parsing: a caller timing out in
+                # this window must not conclude that Max never answered.
+                task.completed = True
         if task is None:
             return
         # utf-8-sig: tolerate a BOM if the sender emits one anyway
@@ -273,7 +285,12 @@ class Bridge:
                         # UI thread is blocked and cannot poll, so last_poll_age
                         # grows for a perfectly healthy, busy Max. Using it to
                         # mean "restarted" reported a running script as a crash.
-                        was_taken = self._inflight.pop(task.id, None) is not None
+                        # `completed` covers the sibling race: the result may
+                        # have been popped for decoding but not yet published.
+                        was_taken = (
+                            self._inflight.pop(task.id, None) is not None
+                            or task.completed
+                        )
                     self._raise_no_result(timeout, was_taken)
         if not task.ok:
             raise MaxError(task.error or "unknown MAXScript error")
