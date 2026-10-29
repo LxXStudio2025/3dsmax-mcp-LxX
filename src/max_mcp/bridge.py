@@ -83,6 +83,12 @@ class MaxRestarted(MaxError):
 # Compat alias -- older call sites catch MaxTimeout.
 MaxTimeout = MaxBusy
 
+# How long to keep waiting after `timeout` for a result Max had to re-deliver.
+# Max pushes undelivered results back one per timer tick (100 ms when active,
+# 2 s when idle), so anything longer than a couple of idle ticks is waste; the
+# outbox holds 16 entries, so a full backlog needs at most a few seconds more.
+_LATE_GRACE_S = 5.0
+
 
 class _Task:
     __slots__ = ("id", "script", "event", "ok", "data", "error", "cancelled")
@@ -249,27 +255,36 @@ class Bridge:
         task = _Task(script)
         self._pending.put(task)
         if not task.event.wait(timeout):
-            task.cancelled = True
-            with self._lock:
-                self._inflight.pop(task.id, None)
+            # The script may well have finished -- only its POST failed. Max
+            # keeps undelivered results in an outbox and re-posts one per timer
+            # tick, so a short grace window turns that case back into a normal
+            # success instead of a scary "it may have changed the scene".
+            # Without this the outbox would be pointless: the task is popped
+            # from _inflight below, so a late result would find nobody home.
+            if not task.event.wait(_LATE_GRACE_S):
+                task.cancelled = True
+                with self._lock:
+                    self._inflight.pop(task.id, None)
 
-            # Distinguish "busy" from "gone": if Max is still polling right now,
-            # it is alive and simply has not finished (or is blocked by a dialog).
-            age = self.last_poll_age
-            if age is not None and age > 3.0:
-                raise MaxRestarted(
-                    f"3ds Max stopped polling {age:.0f}s ago, so it exited, crashed, "
-                    "or the bridge was stopped while this request was in flight. "
-                    "The script may have partially executed -- inspect the scene "
-                    "before re-running it. Nothing was retried automatically."
+                # Distinguish "busy" from "gone": if Max is still polling right
+                # now, it is alive and simply has not finished (or is blocked by
+                # a dialog).
+                age = self.last_poll_age
+                if age is not None and age > 3.0:
+                    raise MaxRestarted(
+                        f"3ds Max stopped polling {age:.0f}s ago, so it exited, crashed, "
+                        "or the bridge was stopped while this request was in flight. "
+                        "The script may have partially executed -- inspect the scene "
+                        "before re-running it. Nothing was retried automatically."
+                    )
+                raise MaxBusy(
+                    f"3ds Max accepted the request but returned no result within "
+                    f"{timeout:.0f}s (+{_LATE_GRACE_S:.0f}s grace for a re-delivered "
+                    "result). It is still polling, so it is alive and most likely "
+                    "executing a long script or blocked by a modal dialog. "
+                    "THE SCRIPT MAY ALREADY HAVE CHANGED THE SCENE -- inspect before "
+                    "retrying, and press ESC in Max to abort the run."
                 )
-            raise MaxBusy(
-                f"3ds Max accepted the request but returned no result within "
-                f"{timeout:.0f}s. It is still polling, so it is alive and most "
-                "likely executing a long script or blocked by a modal dialog. "
-                "THE SCRIPT MAY ALREADY HAVE CHANGED THE SCENE -- inspect before "
-                "retrying, and press ESC in Max to abort the run."
-            )
         if not task.ok:
             raise MaxError(task.error or "unknown MAXScript error")
         return task.data

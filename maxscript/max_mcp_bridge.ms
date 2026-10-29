@@ -18,7 +18,7 @@
 --  on 2016; clever versions do not.
 -- ============================================================================
 
-global __MAXMCP_VER      = "0.3.5"
+global __MAXMCP_VER      = "0.3.6"
 -- One port per Max release so several sessions can run side by side without
 -- stealing each other's tasks: 2016 -> 47100, 2025 -> 47109, 2027 -> 47111.
 global __MAXMCP_YEAR     = ((((maxVersion())[1]) / 1000) + 1998) as integer
@@ -47,6 +47,14 @@ global __MAXMCP_HTTP_T_ACTIVE = 3000
 global __MAXMCP_HTTP_T_IDLE   = 250
 global __MAXMCP_COLD_POLLS    = 3
 global __MAXMCP_POLL_COUNT    = 0
+-- Results the server never acknowledged. A task is dequeued on GET /poll, so by
+-- the time POST /result fails the script has already run and changed the scene.
+-- Dropping the payload leaves the client with a timeout for work that really
+-- happened -- which is exactly what makes a blind retry dangerous. Keep it and
+-- re-post on a later tick instead.
+global __MAXMCP_OUTBOX     = #()
+global __MAXMCP_MAXOUTBOX  = 16
+global __MAXMCP_OUTGIVEUP  = 3
 global __MAXMCP_BOOTLOG  = ((sysInfo.tempdir) + "maxmcp-boot-" + (__MAXMCP_YEAR as string) + ".log")
 global __MAXMCP_LASTLOG  = ""
 
@@ -311,6 +319,58 @@ fn maxMcpHttpPost url body tid timeout:5000 =
 
 
 -- ---------------------------------------------------------------------------
+--  outbox -- results that could not be delivered
+-- ---------------------------------------------------------------------------
+
+fn maxMcpQueueResult tid json =
+(
+    global __MAXMCP_OUTBOX, __MAXMCP_MAXOUTBOX
+    append __MAXMCP_OUTBOX #(tid, json, 0)
+    -- Bounded FIFO. An unbounded array would grow for as long as the server
+    -- stays down, and the oldest result is the one least likely to still matter.
+    while __MAXMCP_OUTBOX.count > __MAXMCP_MAXOUTBOX do
+    (
+        local dropped = __MAXMCP_OUTBOX[1]
+        deleteItem __MAXMCP_OUTBOX 1
+        maxMcpLog ("outbox full, dropped result for task " + dropped[1])
+    )
+    ok
+)
+
+fn maxMcpFlushOne =
+(
+    global __MAXMCP_OUTBOX, __MAXMCP_OUTGIVEUP
+    if __MAXMCP_OUTBOX.count == 0 do return false
+    local item = __MAXMCP_OUTBOX[1]
+    local sent = false
+    try
+    (
+        -- Short timeout: this runs on Max's UI thread, inside the timer tick.
+        -- NOTE maxMcpHttpPost ignores it (WebClient has no timeout knob); a
+        -- refused connection still fails instantly, which is the common case.
+        maxMcpHttpPost (__MAXMCP_URL + "/result") item[2] item[1] timeout:2000
+        sent = true
+    )
+    catch ( maxMcpLog ("re-POST failed for task " + item[1] + ": " + (getCurrentException())) )
+
+    if sent then
+    (
+        deleteItem __MAXMCP_OUTBOX 1
+        return true
+    )
+    -- Array elements are references, so this mutates the queued entry in place.
+    item[3] = item[3] + 1
+    if item[3] >= __MAXMCP_OUTGIVEUP do
+    (
+        deleteItem __MAXMCP_OUTBOX 1
+        maxMcpLog ("gave up on result for task " + item[1] + " after " \
+                   + (__MAXMCP_OUTGIVEUP as string) + " attempts")
+    )
+    false
+)
+
+
+-- ---------------------------------------------------------------------------
 --  one task
 -- ---------------------------------------------------------------------------
 
@@ -373,8 +433,12 @@ fn maxMcpRunOnce =
                " chars, limit " + (__MAXMCP_MAXOUT as string) + "). Narrow the query.\"}"
     )
 
-    try ( maxMcpHttpPost (__MAXMCP_URL + "/result") json tid timeout:10000 )
-    catch ( maxMcpLog ("POST failed for task " + tid + ": " + (getCurrentException())) )
+    local __posted = false
+    try ( maxMcpHttpPost (__MAXMCP_URL + "/result") json tid timeout:10000 ; __posted = true )
+    catch ( maxMcpLog ("POST failed for task " + tid + " (queued for retry): " + (getCurrentException())) )
+    -- The script already ran. Queueing the payload is the only way the client
+    -- can ever learn what happened instead of just seeing a timeout.
+    if not __posted do maxMcpQueueResult tid json
 
     __MAXMCP_SERVED += 1
     __MAXMCP_LASTRES = slot[2]
@@ -413,11 +477,22 @@ fn maxMcpAdapt served =
 
 fn maxMcpTick sender ev =
 (
-    global __MAXMCP_BUSY, __MAXMCP_LASTERR
+    global __MAXMCP_BUSY, __MAXMCP_LASTERR, __MAXMCP_OUTBOX, __MAXMCP_MAXOUTBOX
     if __MAXMCP_BUSY do return undefined
     __MAXMCP_BUSY = true
     local served = 0
-    try ( served = maxMcpTickBody() )
+    try
+    (
+        -- Deliver before pulling: a result that already happened is worth more
+        -- than a fresh task. One per tick keeps the tick short -- posting is a
+        -- blocking call on the UI thread.
+        if __MAXMCP_OUTBOX.count > 0 do maxMcpFlushOne()
+        -- Backpressure: a full outbox means the server is gone. Keep polling
+        -- and every new task adds another undeliverable result; stop instead
+        -- until the backlog drains, so the failure stays visible as "offline"
+        -- rather than as a growing pile of side effects nobody can read.
+        if __MAXMCP_OUTBOX.count < __MAXMCP_MAXOUTBOX do served = maxMcpTickBody()
+    )
     catch ( __MAXMCP_LASTERR = getCurrentException(); maxMcpLogErr (__MAXMCP_LASTERR as string) )
     __MAXMCP_BUSY = false
     -- Outside the try on purpose: a refused connection (server not running) is
@@ -499,6 +574,7 @@ fn maxMcpStatus =
         "running", (__MAXMCP_TIMER != undefined),
         "served", __MAXMCP_SERVED,
         "busy", __MAXMCP_BUSY,
+        "outbox", __MAXMCP_OUTBOX.count,
         "last_error", err,
         "boot_log", __MAXMCP_BOOTLOG
     )
