@@ -1,0 +1,978 @@
+# API diff: api-snapshot-2016.txt vs api-snapshot-2025.txt
+
+Generated from `showClass "*.*"` run inside each Max -- runtime truth, not docs.
+
+## Totals
+
+| | classes | members |
+|---|---|---|
+| A (api-snapshot-2016.txt) | 2066 | 37051 |
+| B (api-snapshot-2025.txt) | 1748 | 15585 |
+| common | 1334 | |
+| **only in A** | **732** | |
+| **only in B** | **414** | |
+| classes with member drift | 153 | |
+
+## Classes only in A (732) — gone in B
+
+- `ADT_Style` : ReferenceTarget
+- `Add_UV_Texsurf__base` : textureMap
+- `Adjustments__lume` : textureMap
+- `Ambient_Reflective_Occlusion__3dsmax` : textureMap
+- `Ambient_Reflective_Occlusion__base` : textureMap
+- `Animation_Store` : UtilityPlugin
+- `Arch__DOF___Bokeh` : textureMap
+- `Arch__Environment_Blur` : textureMap
+- `Arch__Exposure___Photographic` : textureMap
+- `Arch___Design__mi` : material
+- `Architectural__Environment_Portal` : textureMap
+- `Architectural__Photometric_Light` : textureMap
+- `Architectural__Round_Corners_Bump` : textureMap
+- `Architectural__Self_Illuminator` : textureMap
+- `Asset_Browser` : UtilityPlugin
+- `Autodesk_Point_Cloud_Base_Shader` : textureMap
+- `Autodesk_Point_Cloud_Generator` : textureMap
+- `Autodesk_Point_Cloud_Material` : material
+- `Autodesk_Point_Cloud_Shader` : textureMap
+- `Beam__lume` : textureMap
+- `BipSlave_Control` : Matrix3Controller
+- `Bricks__3dsmax` : textureMap
+- `Bump_Basis__base` : textureMap
+- `Bump_Capture__lume` : textureMap
+- `Bump_Combiner__adsktextureMap` : textureMap
+- `Bump_Map__base` : textureMap
+- `Bump__3dsmax` : textureMap
+- `CMB` : BitmapIO
+- `Car_Paint_Material__mi` : material
+- `Car_Paint_Shader__mi` : textureMap
+- `Cellular__3dsmax` : textureMap
+- `Checker__3dsmax` : textureMap
+- `ColorCorrection__3dsmax` : textureMap
+- `Color_Alpha__base` : textureMap
+- `Color_Average__base` : textureMap
+- `Color_Correction__adsk` : textureMap
+- `Color_Intensity__base` : textureMap
+- `Color_Interpolate__base` : textureMap
+- `Color_Mix__base` : textureMap
+- `Color_Override_Ray_Type_Switcher` : textureMap
+- `Color_Spread__base` : textureMap
+- `Combi__contour` : textureMap
+- `Combustion` : textureMap
+- `Composite__3dsmax` : textureMap
+- `Contour_Composite__contour` : textureMap
+- `Contour_Contrast_Function_Levels__contour` : textureMap
+- `Contour_Contrast_Function_Simple__contour` : textureMap
+- `Contour_Only__contour` : textureMap
+- `Contour_PS__contour` : textureMap
+- `Contour_Store_Function_Simple__contour` : textureMap
+- `Contour_Store_Function__contour` : textureMap
+- `Curvature__contour` : textureMap
+- `Custom_LPE` : RenderElement
+- `DGS_Material_Photon__3dsmax` : textureMap
+- `DGS_Material_Photon__physics` : textureMap
+- `DGS_Material__3dsmax` : textureMap
+- `DGS_Material__physics` : textureMap
+- `DGS_Material__physics_phen` : material
+- `Daylight_Slave_Controller` : Matrix3Controller
+- `Daylight_Slave_Intensity_Controller` : FloatController
+- `Dent__3dsmax` : textureMap
+- `Depth_Fade__contour` : textureMap
+- `Depth_of_Field___Bokeh` : textureMap
+- `Depth_of_Field__mental_ray` : MPassCamEffect
+- `Dielectric_Material_Photon__3dsmax` : textureMap
+- `Dielectric_Material_Photon__physics` : textureMap
+- `Dielectric_Material__3dsmax` : textureMap
+- `Dielectric_Material__physics` : textureMap
+- `Dielectric__base` : textureMap
+- `DirectX_Shader_Default` : textureMap
+- `Displacement_3D__3dsmax` : textureMap
+- `Distortion__lume` : textureMap
+- `DummyUnknown_0X00000B20` : Unknown_0X00000B20
+- `Edge_Shadow__lume` : textureMap
+- `Edge__lume` : textureMap
+- `Empty_Flow` : ReferenceTarget
+- `Environment_Background_Camera_Map__mi` : textureMap
+- `Environment_Background_Switcher__mi` : textureMap
+- `Environment_Blur` : textureMap
+- `Environment_Probe_Chrome_Ball__mi` : textureMap
+- `Environment_Probe_Gray_Ball__mi` : textureMap
+- `Environment__3dsmax` : textureMap
+- `Facade__lume` : textureMap
+- `Factor_Color__contour` : textureMap
+- `Falloff2__3dsmax` : textureMap
+- `Falloff__3dsmax` : textureMap
+- `Fire_Effect__3dsmax` : textureMap
+- `Flat_Mirror__3dsmax` : textureMap
+- `Fog__3dsmax` : textureMap
+- `Frame_Fade__contour` : textureMap
+- `Geo_Cone__base` : textureMap
+- `Geo_Cube__base` : textureMap
+- `Geo_Cylinder__base` : textureMap
+- `Geo_Instance__base` : textureMap
+- `Geo_Instnace_mlist__base` : textureMap
+- `Geo_Plane__base` : textureMap
+- `Geo_Sphere__base` : textureMap
+- `Geo_Torus__base` : textureMap
+- `GhostTrails` : modifier
+- `Glare__lume` : textureMap
+- `GlaretextureMap` : textureMap
+- `Glass__lume` : textureMap
+- `Glass__physics_phen` : material
+- `Glow__lume` : textureMap
+- `Gradient_Ramp__3dsmax` : textureMap
+- `Gradient__3dsmax` : textureMap
+- `HDR_Image_Motion_Blur__mi` : textureMap
+- `Height_Map_Displacement__3dsmax` : textureMap
+- `Illum_Blinn__base` : textureMap
+- `Illum_CookTorr__base` : textureMap
+- `Illum_Hair__base` : textureMap
+- `Illum_Lambert__base` : textureMap
+- `Illum_Phong__base` : textureMap
+- `Illum_Ward_Deriv__base` : textureMap
+- `Illum_Ward__base` : textureMap
+- `Illumination__lume` : textureMap
+- `Ink__N_Paint__3dsmax` : textureMap
+- `Inverse_of_Photographic_Exposure` : textureMap
+- `Invisible__physics_phen` : material
+- `Kelvin_Temperature_Color` : textureMap
+- `Landscape__lume` : textureMap
+- `LandscapetextureMap` : textureMap
+- `Layer_Thinner__contour` : textureMap
+- `Lens_Clamp__base` : textureMap
+- `Lens_Stencil__base` : textureMap
+- `Light_Infinite__base` : textureMap
+- `Light_Photometric__base` : textureMap
+- `Light_Point__base` : textureMap
+- `Light_Spot__base` : textureMap
+- `Light__Area` : RenderElement
+- `Light__Environment` : RenderElement
+- `Light__Point` : RenderElement
+- `Light_lines` : textureMap
+- `Lightmap_Sample__base` : textureMap
+- `Lightmap_Write__base` : textureMap
+- `Logarithmic_Camera_Exposure__3dsmax` : textureMap
+- `Lookup_Background__base` : textureMap
+- `Lookup_Cube1__base` : textureMap
+- `Lookup_Cube6__base` : textureMap
+- `Lookup_Cylindrical__base` : textureMap
+- `Lookup_Spherical__base` : textureMap
+- `Lume_Glow_Material__Lambertian` : textureMap
+- `Lume_Metal_Material__Phong` : textureMap
+- `Lume_Translucent_Material__Lambertian` : textureMap
+- `MIDI_设备Unknown_0X00001050` : Unknown_0X00001050
+- `MIDI_设备Unknown_0X00001060` : Unknown_0X00001060
+- `Marble__3dsmax` : textureMap
+- `Mask__3dsmax` : textureMap
+- `MasterBlock` : MasterBlockController
+- `MasterLayerControlManager` : Unknown_0X0000900F
+- `Master_Controller_plugin_not_found` : MasterBlockController
+- `Master_Motion_Clip` : MasterBlockController
+- `Master_Point_Controller` : MasterPointController
+- `Material_to_Shader` : textureMap
+- `Matte_Shadow_Reflection__mi` : material
+- `Max_Bitmap__3dsmax` : textureMap
+- `Max_LightMap_Lightmeter_Shader` : textureMap
+- `Max_Master_Clip` : ReferenceTarget
+- `MaxscriptParticleContainer` : ReferenceTarget
+- `Metal__lume` : textureMap
+- `Mist__lume` : textureMap
+- `Mix__3dsmax` : textureMap
+- `MixamoController` : Matrix3Controller
+- `Motion_Clip_SlaveFloat` : FloatController
+- `Motion_Clip_SlavePoint3` : Point3Controller
+- `Motion_Clip_SlavePos` : PositionController
+- `Motion_Clip_SlaveRotation` : RotationController
+- `Motion_Clip_SlaveScale` : ScaleController
+- `Motion_Vector_Export__mi` : textureMap
+- `Mtl__Caustics` : RenderElement
+- `Mtl__Diffuse` : RenderElement
+- `Mtl__Reflections` : RenderElement
+- `Mtl__Self_Illumination` : RenderElement
+- `Mtl__Translucency` : RenderElement
+- `Mtl__Transparency` : RenderElement
+- `Multi_Sub_Map` : textureMap
+- `MyBricks` : textureMap
+- `MyBricksPhenomenon` : material
+- `Night__lume` : textureMap
+- `NoMaterial` : material
+- `NoTexture` : textureMap
+- `Node_Visibility` : textureMap
+- `Noise__3dsmax` : textureMap
+- `Object_Color` : textureMap
+- `Ocean__lume` : textureMap
+- `One_Click_Particle_Flow` : ReferenceTarget
+- `Opacity__base` : textureMap
+- `Output__3dsmax` : textureMap
+- `Oversampling_Lens__physics` : textureMap
+- `PFActionListPool` : ReferenceTarget
+- `PFSystemPool` : ReferenceTarget
+- `PF_NotifyDep_Catcher` : ReferenceTarget
+- `PView_Manager` : ReferenceTarget
+- `Parti_Volume_Photon__physics` : textureMap
+- `Parti_Volume_Photon__physicstextureMap` : textureMap
+- `Parti_Volume__physics` : textureMap
+- `Parti_Volume__physics_legacy` : textureMap
+- `ParticleContainer` : ReferenceTarget
+- `Particle_Age__3dsmax` : textureMap
+- `Particle_Blur__3dsmax` : textureMap
+- `Particle_View` : helper
+- `Passthrough_Bump_Map__base` : textureMap
+- `Path_Material__physics` : textureMap
+- `Pencil__4_反射_折射` : textureMap
+- `Pencil__4_文件输出` : renderEffect
+- `Pencil__4_材质` : material
+- `Pencil__4_材质RenderElement` : RenderElement
+- `Pencil__4_法线复制` : modifier
+- `Pencil__4_用户自定义` : CustAttrib
+- `Pencil__4_画笔` : textureMap
+- `Pencil__4_线` : renderEffect
+- `Pencil__4_线RenderElement` : RenderElement
+- `Pencil__4_线_外部参照` : renderEffect
+- `Pencil__4_线_集合` : ReferenceTarget
+- `Pencil__4_选择_点` : modifier
+- `Pencil__4_透视变形` : modifier
+- `Pencil__4_透视变形_对象` : SpacewarpModifier
+- `Pencil__4_透视变形开关点` : ReferenceTarget
+- `Perlin_Marble__3dsmax` : textureMap
+- `Photon_Basic__base` : textureMap
+- `Physical_Lens_DOF__physics` : textureMap
+- `Physical_Light__physics` : textureMap
+- `Planet__3dsmax` : textureMap
+- `Polygon_Cruncher` : modifier
+- `Polygon_Cruncher___MAX先生汉化` : UtilityPlugin
+- `Preset_Flow` : ReferenceTarget
+- `ProMaterials__Ceramic_V2` : material
+- `ProMaterials__Concrete_V2` : material
+- `ProMaterials__Generic_V2` : material
+- `ProMaterials__Glazing_V2` : material
+- `ProMaterials__Hardwood_V2` : material
+- `ProMaterials__Masonry_CMU_V2` : material
+- `ProMaterials__Metal_V2` : material
+- `ProMaterials__Metallic_Paint_V2` : material
+- `ProMaterials__Mirror_V2` : material
+- `ProMaterials__Plastic_Vinyl_V2` : material
+- `ProMaterials__Solid_Glass_V2` : material
+- `ProMaterials__Stone_V2` : material
+- `ProMaterials__Wall_Paint_V2` : material
+- `ProMaterials__Water_V2` : material
+- `Pseudo_Color_Camera_Exposure__3dsmax` : textureMap
+- `Pseudo_Color_Camera_Exposure__3dsmaxtextureMap` : textureMap
+- `PyramidUnknown_0X00000B20` : Unknown_0X00000B20
+- `PythonHost` : UtilityPlugin
+- `QTime` : BitmapIO
+- `RGB_Multiply__3dsmax` : textureMap
+- `RGB_to_BW` : textureMap
+- `Ray_Marcher__base` : textureMap
+- `Reflect_Refract__3dsmax` : textureMap
+- `Reflect__base` : textureMap
+- `Refract__base` : textureMap
+- `Refraction_Index__base` : textureMap
+- `Render_Subset_of_Scene_Masking__mi` : textureMap
+- `SSS2_Shader` : textureMap
+- `SSS2_ShadertextureMap` : textureMap
+- `SSS2_Skin` : material
+- `SSS2_Skin_Displacement` : material
+- `SSS2_Surface_Shader` : textureMap
+- `SSS_Fast_Material__mi` : material
+- `SSS_Fast_Render_Shader___mi` : textureMap
+- `SSS_Fast_Render_Shader__mi` : textureMap
+- `SSS_Fast_Skin_Material_Displace__mi` : material
+- `SSS_Fast_Skin_Material__mi` : material
+- `SSS_Lambert_Gamma__mi` : textureMap
+- `SSS_Lightmap_Write__mi` : textureMap
+- `SSS_Lightmapping_shader` : textureMap
+- `SSS_Passthrough_Shader__mi` : textureMap
+- `SSS_Physical_Material__mi` : material
+- `SSS_Physical_Shader__mi` : textureMap
+- `SSS_Specular_Reflections_for_Skin__mi` : textureMap
+- `SW3D_Exp` : ExporterPlugin
+- `Scene_State_ManagerUnknown_0X0000900F` : Unknown_0X0000900F
+- `Shader_List__Bump` : textureMap
+- `Shader_List__Displacement` : textureMap
+- `Shader_List__Environment` : textureMap
+- `Shader_List__Lens` : textureMap
+- `Shader_List__Output` : textureMap
+- `Shader_List__Photon_Volume` : textureMap
+- `Shader_List__Shadow` : textureMap
+- `Shader_List__Texture` : textureMap
+- `Shader_List__Volume` : textureMap
+- `Shadow_Transparency__base` : textureMap
+- `Shell_Pro` : modifier
+- `Simple_Bumpmap_Map___adsk` : textureMap
+- `Simple_Bumpmap_Map__adsk` : textureMap
+- `Simple_Checker_Map__adsk` : textureMap
+- `Simple_Checker_Map__adsktextureMap` : textureMap
+- `Simple_Color_Map__adsk` : textureMap
+- `Simple_Colormap_Map___adsk` : textureMap
+- `Simple_Colormap_Map__adsk` : textureMap
+- `Simple_Gradient_Map__adsk` : textureMap
+- `Simple_Hemispherical_Map__adsk` : textureMap
+- `Simple_Hemispherical_Map__adsktextureMap` : textureMap
+- `Simple_Image_Map__Bitmap___adsk` : textureMap
+- `Simple_Image_Map__Bitmap___adsktextureMap` : textureMap
+- `Simple_Marble_Map__adsk` : textureMap
+- `Simple_Marble_Map__adsktextureMap` : textureMap
+- `Simple_Mtl_Ceramic__adsk` : material
+- `Simple_Mtl_Concrete__adsk` : material
+- `Simple_Mtl_Generic__adsk` : material
+- `Simple_Mtl_Glazing__adsk` : material
+- `Simple_Mtl_Hardwood__adsk` : material
+- `Simple_Mtl_Masonry_CMU__adsk` : material
+- `Simple_Mtl_Metal_V2_adsk` : textureMap
+- `Simple_Mtl_Metal__adsk` : material
+- `Simple_Mtl_Metal_adsk_V1` : textureMap
+- `Simple_Mtl_MetallicPaint__adsk` : material
+- `Simple_Mtl_Mirror__adsk` : material
+- `Simple_Mtl_Plastic_Vinyl__adsk` : material
+- `Simple_Mtl_Radiance__adsk` : material
+- `Simple_Mtl_Solid_Glass__adsk` : material
+- `Simple_Mtl_Stone__adsk` : material
+- `Simple_Mtl_Wall_Paint__adsk` : material
+- `Simple_Mtl_Water__adsk` : material
+- `Simple_Noise_Map__adsk` : textureMap
+- `Simple_Noise_Map__adsktextureMap` : textureMap
+- `Simple_Speckle_Map__adsk` : textureMap
+- `Simple_Speckle_Map__adsktextureMap` : textureMap
+- `Simple_Tile_Map__adsk` : textureMap
+- `Simple_Tile_Map__adsktextureMap` : textureMap
+- `Simple_Wave_Map__adsk` : textureMap
+- `Simple_Wave_Map__adsktextureMap` : textureMap
+- `Simple_Wood_Map__adsk` : textureMap
+- `Simple_Wood_Map__adsktextureMap` : textureMap
+- `Simple__contour` : textureMap
+- `SlaveFloat` : FloatController
+- `SlavePos` : PositionController
+- `SlaveRotation` : RotationController
+- `SlaveScale` : ScaleController
+- `Slave_Control` : Matrix3Controller
+- `Slave_Point3` : Point3Controller
+- `Smoke__3dsmax` : textureMap
+- `Speckle__3dsmax` : textureMap
+- `Splat__3dsmax` : textureMap
+- `Stain__lume` : textureMap
+- `Standard_Flow` : ReferenceTarget
+- `Store_Ligth_Levels` : textureMap
+- `Stucco__3dsmax` : textureMap
+- `Submerge__lume` : textureMap
+- `SubstanceShader` : textureMap
+- `Sunlight_Slave_Controller` : Matrix3Controller
+- `Sunlight_Slave_Intensity_Controller` : FloatController
+- `Swirl__3dsmax` : textureMap
+- `TKPolygonCtrl` : ReferenceTarget
+- `Texture_CheckerBoard__base` : textureMap
+- `Texture_Filter_Lookup__base` : textureMap
+- `Texture_Lookup__base` : textureMap
+- `Texture_Polka_Dot__base` : textureMap
+- `Texture_Polka_Sphere__base` : textureMap
+- `Texture_Remap__base` : textureMap
+- `Texture_Rotate__base` : textureMap
+- `Texture_Turbulence__base` : textureMap
+- `Texture_Vector__base` : textureMap
+- `Texture_Wave__base` : textureMap
+- `Thin_Wall_Refraction__3dsmax` : textureMap
+- `Tint__3dsmax` : textureMap
+- `Translucency__lume` : textureMap
+- `Transmat_Photon__physics` : textureMap
+- `Transmat__physics` : textureMap
+- `Transparency__base` : textureMap
+- `Turn_To_gPoly` : modifier
+- `Two_Sided__base` : textureMap
+- `UV_Coordinate__3dsmax` : textureMap
+- `UV_Generator__3dsmax` : textureMap
+- `UV_Packer` : modifier
+- `Unified_Image_Map__Bitmap___adsk` : textureMap
+- `Utility` : helper
+- `Utility_BumpLookup__protein` : textureMap
+- `Utility_ColorCorrection_Maya_Shaders__protein` : textureMap
+- `Utility_ColorPassThrough__protein` : textureMap
+- `Utility_Color_Correction_Internal__protein` : textureMap
+- `Utility_Combine3Bump__protein` : textureMap
+- `Utility_Elliptical_Bump__protein` : textureMap
+- `Utility_Elliptical_Tex__protein` : textureMap
+- `Utility_Gamma___Gain__mi` : textureMap
+- `Utility_Mia_Material__protein` : textureMap
+- `Utility_Mix2Shader__protein` : textureMap
+- `Utility_MultiMixer__protein` : textureMap
+- `Utility_Switch8Shader__protein` : textureMap
+- `Utility_TexLookup__protein` : textureMap
+- `Vertex_Color__3dsmax` : textureMap
+- `Volume_Fog__3dsmax` : textureMap
+- `Volume_Light__3dsmax` : textureMap
+- `Volume__base` : textureMap
+- `Water_Surface_Shadow__lume` : textureMap
+- `Water_Surface__lume` : textureMap
+- `Water__3dsmax` : textureMap
+- `Wc3_ModelScape` : helper
+- `Wet_Dry_Mixer__lume` : textureMap
+- `Width_From_Color__contour` : textureMap
+- `Width_From_Light_Dir__contour` : textureMap
+- `Width_From_Light__contour` : textureMap
+- `Wood__3dsmax` : textureMap
+- `WrapAround__lume` : textureMap
+- `XYZ_Coordinate__3dsmax` : textureMap
+- `XYZ_Generator__3dsmax` : textureMap
+- `adsk_KelvinToColor` : textureMap
+- `adsk_Light_Default` : textureMap
+- `adsk_Light_Photometric` : textureMap
+- `adsk_Metal_Cutouts_Shape` : textureMap
+- ... and 332 more
+
+## Classes only in B (414) — new since A
+
+- `A360RendererPresetsHelper` : ReferenceTarget
+- `ART_Renderer` : RendererClass
+- `ART_Renderer_Noise_Filter` : RenderElement
+- `ATF_SKETCHUP_Import` : ImporterPlugin
+- `ActiveShadeFragment` : GraphicsFragmentPlugin
+- `Adaptive_Halton` : SamplerClass
+- `Adaptive_Uniform` : SamplerClass
+- `Adjust_Color_Tool` : UserDataTypeClass
+- `AdobeT1` : BezierFontLoaderClass
+- `AdvancedWood` : textureMap
+- `AlembicDummyObject` : helper
+- `AlembicFloat` : floatController
+- `AnaglyphFragment` : GraphicsFragmentPlugin
+- `AnchorCustomAttribute` : CustAttrib
+- `AnimcraftSetting` : AttributeDef
+- `ApplyUVAsColor` : modifier
+- `ApplyUVAsHSLColor` : modifier
+- `ApplyUVAsHSLGradient` : modifier
+- `ApplyUVAsHSLGradientWithMidpoint` : modifier
+- `ArnoldAmbientOcclusionMap` : CommonBakeMapOperator
+- `ArnoldBeautyMap` : CommonBakeMapOperator
+- `ArnoldColorMap` : CommonBakeMapOperator
+- `ArnoldEmissiveMap` : CommonBakeMapOperator
+- `ArnoldMaterialIDMap` : CommonBakeMapOperator
+- `ArnoldMaterialInputMap` : CommonBakeMapOperator
+- `ArnoldMetalnessMap` : CommonBakeMapOperator
+- `ArnoldNormalMap` : CommonBakeMapOperator
+- `ArnoldOpacityMap` : CommonBakeMapOperator
+- `ArnoldRoughnessMap` : CommonBakeMapOperator
+- `ArnoldRoundedCornersMap` : CommonBakeMapOperator
+- `ArnoldVertexColorMap` : CommonBakeMapOperator
+- `ArrowHelper` : helper
+- `BackgroundFragment` : GraphicsFragmentPlugin
+- `BakeToTexture` : UtilityPlugin
+- `BakeToTextureData` : CtrlUserDataTypeClass
+- `Batch_Render_ManagerCtrlUserDataTypeClass` : CtrlUserDataTypeClass
+- `BevelProfileUtilityInterface` : UtilityPlugin
+- `Bezier_Point2` : Point2Controller
+- `BipDriven_Control` : Matrix3Controller
+- `BitmapProxyManagerImp_Latch` : UserDataTypeClass
+- `BitmapProxy_Config_Dialog` : UserDataTypeClass
+- `BlendFragment` : GraphicsFragmentPlugin
+- `BlendedBoxMap` : textureMap
+- `BlitFragment` : GraphicsFragmentPlugin
+- `BloomAdsk` : GraphicsFragmentPlugin
+- `Boolean2ObjectManager` : BooleanObjectManagerClass
+- `Boolean3` : GeometryClass
+- `CacheSubGraphOutputFragment` : GraphicsFragmentPlugin
+- `ClayFragment` : GraphicsFragmentPlugin
+- `CleanUp` : helper
+- `ColorConversionFragment` : GraphicsFragmentPlugin
+- `ColorConverter` : UtilityPlugin
+- `ColorMap` : textureMap
+- `ColorTargetToPresentableTargetFragment` : GraphicsFragmentPlugin
+- `CommonMap_AmbientOcclusion` : CommonBakeMap
+- `CommonMap_Beauty` : CommonBakeMap
+- `CommonMap_Color` : CommonBakeMap
+- `CommonMap_Emissive` : CommonBakeMap
+- `CommonMap_MaterialID` : CommonBakeMap
+- `CommonMap_MaterialInput` : CommonBakeMap
+- `CommonMap_Metalness` : CommonBakeMap
+- `CommonMap_Normal` : CommonBakeMap
+- `CommonMap_Opacity` : CommonBakeMap
+- `CommonMap_Roughness` : CommonBakeMap
+- `CommonMap_RoundedCorners` : CommonBakeMap
+- `CommonMap_VertexColor` : CommonBakeMap
+- `Compound` : textureMap
+- `CompoundIO` : textureMap
+- `CompoundIndexedConnection` : ReferenceTarget
+- `CompoundMember` : ReferenceTarget
+- `Conformmodifier` : modifier
+- `Custom_Attributes_Presets` : AttributeDef
+- `DataChannelModifier` : modifier
+- `Daylight_Driven_Controller` : Matrix3Controller
+- `Daylight_Driven_Intensity_Controller` : floatController
+- `DefaultLightWorldGenFragment` : GraphicsFragmentPlugin
+- `DepthFragment` : GraphicsFragmentPlugin
+- `DisplayAdaptiveDegradeResultFragment` : GraphicsFragmentPlugin
+- `DrivenFloat` : floatController
+- `DrivenPos` : positionController
+- `DrivenRotation` : rotationController
+- `DrivenScale` : scaleController
+- `Driven_Control` : Matrix3Controller
+- `Driven_Point3` : point3Controller
+- `DriverBlock` : DriverBlockController
+- `Driver_Block_Control_plugin_not_found` : DriverBlockController
+- `Driver_Motion_Clip` : DriverBlockController
+- `DummyBitmapFilterClass` : BitmapFilterClass
+- `Expression_Float` : IDataChannelEngineClass
+- `Expression_Point3` : IDataChannelEngineClass
+- `FastShadingFragment` : GraphicsFragmentPlugin
+- `FilterMeshColorsByHue` : modifier
+- `FilterPerViewWorldGenFragment` : GraphicsFragmentPlugin
+- `FluidLoader` : GeometryClass
+- `FluidSimObjectManagerUnknown_0X14BA2CD8` : Unknown_0X14BA2CD8
+- `FragmentGraph` : GraphicsFragmentPlugin
+- `FreehandSpline` : shape
+- `GLTF_Export` : ExporterPlugin
+- `GameExporter` : UtilityPlugin
+- `GammaCorrectionFragment` : GraphicsFragmentPlugin
+- `GhostFrameFragment` : GraphicsFragmentPlugin
+- `GhostRenderFragment` : GraphicsFragmentPlugin
+- `GhostWorldGenFragment` : GraphicsFragmentPlugin
+- `GizmoFragment` : GraphicsFragmentPlugin
+- `HSLicenseMgr2` : UtilityPlugin
+- `HSglTFExporter` : ExporterPlugin
+- `HSglTFImporter` : ImporterPlugin
+- `HSglTFImporterUtilityPlugin` : UtilityPlugin
+- `Hammersley` : SamplerClass
+- `IlluminanceFragment` : GraphicsFragmentPlugin
+- `InfluenceHelper` : helper
+- `InverseColorConversionFragment` : GraphicsFragmentPlugin
+- `Joystick_Input_DeviceMotionCaptureDeviceBindingClass` : MotionCaptureDeviceBindingClass
+- `Joystick_Input_DeviceMotionCaptureDeviceClass` : MotionCaptureDeviceClass
+- `Keyboard_Input_Device` : MotionCaptureDeviceClass
+- `Keyboard_Input_DeviceMotionCaptureDeviceBindingClass` : MotionCaptureDeviceBindingClass
+- `MCG_Donut` : shape
+- `MCG_MeshEdgesToSpline` : shape
+- `MCG_SinWave` : shape
+- `MCG_lookAt` : rotationController
+- `MCG_rayToSurfaceOrientation` : rotationController
+- `MCG_rayToSurfacePosition` : positionController
+- `MCG_rayToSurfaceTransform` : Matrix3Controller
+- `MCG_rotationalSpring1DOFTransform` : Matrix3Controller
+- `MCG_rotationalSpring3DOFTransform` : Matrix3Controller
+- `MIDI_DeviceMotionCaptureDeviceBindingClass` : MotionCaptureDeviceBindingClass
+- `MIDI_DeviceMotionCaptureDeviceClass` : MotionCaptureDeviceClass
+- `MainLayerControlManager` : CtrlUserDataTypeClass
+- `Main_Layer` : CtrlUserDataTypeClass
+- `MapMtlClipboard` : GlobalUtilityPlugin
+- `MapOverride_BTT_Only` : BakeElement
+- `Material_Output_Selector` : material
+- `Material_Switcher` : material
+- `MaxLiquid` : GeometryClass
+- `MaxLiquidSolver` : MaxFluidSolverClass
+- `MaxMotionClipDriver` : CtrlUserDataTypeClass
+- `MaxMotionField` : SpacewarpObject
+- `MaxVectorFieldMod` : SpacewarpModifier
+- `Max_2_5_Star` : SamplerClass
+- `Max_Driver_Clip` : ReferenceTarget
+- `Max_Mixer_Clip` : CtrlUserDataTypeClass
+- `MemoryTargetToOGSTargetFragment` : GraphicsFragmentPlugin
+- `Missing_Common_Bake_Map_Plug_in` : CommonBakeMap
+- `Missing_DataChannelEngine` : IDataChannelEngineClass
+- `Missing_MaxFluid_Solver` : MaxFluidSolverClass
+- `Missing_MotCapDev` : MotionCaptureDeviceBindingClass
+- `Missing_Sampler` : SamplerClass
+- `Missing_User_Type_Control` : CtrlUserDataTypeClass
+- `Motion_Clip_DrivenFloat` : floatController
+- `Motion_Clip_DrivenPoint3` : point3Controller
+- `Motion_Clip_DrivenPos` : positionController
+- `Motion_Clip_DrivenRotation` : rotationController
+- `Motion_Clip_DrivenScale` : scaleController
+- `Mouse_Input_DeviceMotionCaptureDeviceBindingClass` : MotionCaptureDeviceBindingClass
+- `Mouse_Input_DeviceMotionCaptureDeviceClass` : MotionCaptureDeviceClass
+- `MultiTile` : textureMap
+- `NPRFragment` : GraphicsFragmentPlugin
+- `NitrousLightWorldGenFragment` : GraphicsFragmentPlugin
+- `NitrousPostSceneWorldGenFragment` : GraphicsFragmentPlugin
+- `NitrousPreSceneWorldGenFragment` : GraphicsFragmentPlugin
+- `NitrousRenderWorldGenFragment` : GraphicsFragmentPlugin
+- `Normalize_Spline2` : modifier
+- `OSLMap` : textureMap
+- `ObtainRenderTargetFragment` : GraphicsFragmentPlugin
+- `Offset_Manager_GUP` : GlobalUtilityPlugin
+- `OldBoolean` : GeometryClass
+- `Operator_Clamp` : IDataChannelEngineClass
+- `Operator_ColorElements` : IDataChannelEngineClass
+- `Operator_ColorSpaceConversion` : IDataChannelEngineClass
+- `Operator_ComponentSpace` : IDataChannelEngineClass
+- `Operator_ConvertToSubObjectType` : IDataChannelEngineClass
+- `Operator_Curvature` : IDataChannelEngineClass
+- `Operator_Curve` : IDataChannelEngineClass
+- `Operator_Decay` : IDataChannelEngineClass
+- `Operator_DeltaMush` : IDataChannelEngineClass
+- `Operator_Distort` : IDataChannelEngineClass
+- `Operator_EdgeInput` : IDataChannelEngineClass
+- `Operator_EdgeOutput` : IDataChannelEngineClass
+- `Operator_FaceInput` : IDataChannelEngineClass
+- `Operator_FaceOutput` : IDataChannelEngineClass
+- `Operator_GeoQuantize` : IDataChannelEngineClass
+- `Operator_Invert` : IDataChannelEngineClass
+- `Operator_Maxscript` : IDataChannelEngineClass
+- `Operator_MaxscriptProcess` : IDataChannelEngineClass
+- `Operator_NodeInfluence` : IDataChannelEngineClass
+- `Operator_Normalize` : IDataChannelEngineClass
+- `Operator_Point3_To_Float` : IDataChannelEngineClass
+- `Operator_Scale` : IDataChannelEngineClass
+- `Operator_Smooth` : IDataChannelEngineClass
+- `Operator_TensionDeform` : IDataChannelEngineClass
+- `Operator_TransformElements` : IDataChannelEngineClass
+- `Operator_Vector` : IDataChannelEngineClass
+- `Operator_Velocity` : IDataChannelEngineClass
+- `Operator_VertexInput` : IDataChannelEngineClass
+- `Operator_VertexOutput` : IDataChannelEngineClass
+- `Operator_XYZSpace` : IDataChannelEngineClass
+- `Optimize_Spline` : modifier
+- `OverlayFragment` : GraphicsFragmentPlugin
+- `PBRImporter` : UtilityPlugin
+- `PBRMetalRough` : material
+- `PBRSpecGloss` : material
+- `Path_Deform2` : modifier
+- `PhysicalMaterial` : material
+- `Physical_Sun___Sky_Environment` : textureMap
+- `Point2_XRef_Controller` : Point2Controller
+- `Point_Controller_Container` : PointControllerContainer
+- `PopRefUtil` : UtilityPlugin
+- `PostSceneFragment` : GraphicsFragmentPlugin
+- `PreSceneFragment` : GraphicsFragmentPlugin
+- `Preset_Maker` : modifier
+- `PyramidBitmapFilterClass` : BitmapFilterClass
+- `Python3Host` : UtilityPlugin
+- `ReflectionFragment` : GraphicsFragmentPlugin
+- `RetimerDriverCtrl` : CtrlUserDataTypeClass
+- `SMEAttr` : CustAttrib
+- `SMENodeAttr` : CustAttrib
+- `SMEViewAttr` : CustAttrib
+- `ScanlineBeautyMap` : CommonBakeMapOperator
+- `ScanlineColorMap` : CommonBakeMapOperator
+- `ScanlineEmissiveMap` : CommonBakeMapOperator
+- `ScanlineMaterialIDMap` : CommonBakeMapOperator
+- `ScanlineMaterialInput` : CommonBakeMapOperator
+- `ScanlineMetalnessMap` : CommonBakeMapOperator
+- `ScanlineNormalMap` : CommonBakeMapOperator
+- `ScanlineOpacityMap` : CommonBakeMapOperator
+- `ScanlineRoughnessMap` : CommonBakeMapOperator
+- `ScanlineVertexColorMap` : CommonBakeMapOperator
+- `SceneAppData_Latch` : CtrlUserDataTypeClass
+- `Scene_Converter` : GlobalUtilityPlugin
+- `Scene_State_ManagerCtrlUserDataTypeClass` : CtrlUserDataTypeClass
+- `SecurityToolsUtility` : GlobalUtilityPlugin
+- `SelectionFragment` : GraphicsFragmentPlugin
+- `SelectionPreviewFragment` : GraphicsFragmentPlugin
+- `Set_Key_Crtl` : floatController
+- `ShapeBooleanObject` : shape
+- `ShapeMap` : textureMap
+- `SharedViews` : UtilityPlugin
+- `SnapWorkingPivot` : GlobalUtilityPlugin
+- `Soft_Selection_Tool` : UserDataTypeClass
+- `SplineInfluence` : modifier
+- `SplineMirror` : modifier
+- `SplineMorph` : modifier
+- `SplineOverlap` : modifier
+- `SplineRelax` : modifier
+- `Spline_Chamfer` : modifier
+- `StereoFragment` : GraphicsFragmentPlugin
+- `Sun_Positioner` : light
+- `Sunlight_Driven_Controller` : Matrix3Controller
+- `Sunlight_Driven_Intensity_Controller` : floatController
+- `SvfExporter` : ExporterPlugin
+- `TempObjectClass` : TemporaryMergeNodeObjectClass
+- `TextMap` : textureMap
+- `TextPlus` : GeometryClass
+- `Text_Baseline_Manipulator` : helper
+- `Text_Display_Only_Manipulator` : helper
+- `Text_Kerning_Manipulator` : helper
+- `Text_Tracking_Manipulator` : helper
+- `Text_Uniform_Scale_Manipulator` : helper
+- `Text_X_Scale_Manipulator` : helper
+- `Text_Y_Scale_Manipulator` : helper
+- `TextureObjMask` : textureMap
+- `ToneMappingFragment` : GraphicsFragmentPlugin
+- `TooltipFragment` : GraphicsFragmentPlugin
+- `TrueType` : BezierFontLoaderClass
+- `UpdatePerViewWorldGenFragment` : GraphicsFragmentPlugin
+- `Vertex_Paint_Floater` : UserDataTypeClass
+- `VolumeHelper` : helper
+- `Weighted_Normals` : modifier
+- `WireframeFragment` : GraphicsFragmentPlugin
+- `XORRenderFragment` : GraphicsFragmentPlugin
+- `glTFMaterial` : material
+- `offsetTimer` : floatController
+- `osl_Blackbody` : textureMap
+- `osl_CameraProjector2` : textureMap
+- `osl_Candy` : textureMap
+- `osl_Checker` : textureMap
+- `osl_ColorAdd` : textureMap
+- `osl_ColorClamp` : textureMap
+- `osl_ColorComp` : textureMap
+- `osl_ColorCurveGrad` : textureMap
+- `osl_ColorCurves` : textureMap
+- `osl_ColorDiv` : textureMap
+- `osl_ColorJuggler` : textureMap
+- `osl_ColorKey` : textureMap
+- `osl_ColorMax` : textureMap
+- `osl_ColorMin` : textureMap
+- `osl_ColorMul` : textureMap
+- `osl_ColorScale` : textureMap
+- `osl_ColorSpace` : textureMap
+- `osl_ColorSub` : textureMap
+- `osl_ColorTweak` : textureMap
+- `osl_Compare` : textureMap
+- `osl_Composite` : textureMap
+- `osl_DegToRad` : textureMap
+- `osl_Digits` : textureMap
+- `osl_DotMatrix` : textureMap
+- `osl_EnvironmentBackground` : textureMap
+- `osl_Falloff` : textureMap
+- `osl_Float1ofN` : textureMap
+- `osl_Float1ofNtextureMap` : textureMap
+- `osl_Float2Int` : textureMap
+- `osl_FloatACos` : textureMap
+- `osl_FloatASin` : textureMap
+- `osl_FloatATan` : textureMap
+- `osl_FloatAbs` : textureMap
+- `osl_FloatAdd` : textureMap
+- `osl_FloatAngle` : textureMap
+- `osl_FloatClamp` : textureMap
+- `osl_FloatComp` : textureMap
+- `osl_FloatCos` : textureMap
+- `osl_FloatCurves` : textureMap
+- `osl_FloatDiv` : textureMap
+- `osl_FloatExp` : textureMap
+- `osl_FloatInterpolate` : textureMap
+- `osl_FloatLog` : textureMap
+- `osl_FloatLogX` : textureMap
+- `osl_FloatMax` : textureMap
+- `osl_FloatMin` : textureMap
+- `osl_FloatMod` : textureMap
+- `osl_FloatMul` : textureMap
+- `osl_FloatNegate` : textureMap
+- `osl_FloatPow` : textureMap
+- `osl_FloatRange` : textureMap
+- `osl_FloatRecip` : textureMap
+- `osl_FloatSin` : textureMap
+- `osl_FloatSmoothStep` : textureMap
+- `osl_FloatSqrt` : textureMap
+- `osl_FloatSub` : textureMap
+- `osl_FloatTan` : textureMap
+- `osl_FourPointGradient` : textureMap
+- `osl_GaborNoise` : textureMap
+- `osl_GetAttribute` : textureMap
+- `osl_GetCoordSpace` : textureMap
+- `osl_GetFrame` : textureMap
+- `osl_GetMtlID` : textureMap
+- `osl_GetNodeID` : textureMap
+- `osl_GetNodeName` : textureMap
+- `osl_GetObjSpace` : textureMap
+- `osl_GetObjectID` : textureMap
+- `osl_GetParticleAge` : textureMap
+- `osl_GetTime` : textureMap
+- `osl_GetUVW` : textureMap
+- `osl_GetWireColor` : textureMap
+- `osl_Gradient2` : textureMap
+- `osl_GreaterThan` : textureMap
+- `osl_HDRILights` : textureMap
+- `osl_HDRIenv` : textureMap
+- `osl_HalftoneDots` : textureMap
+- `osl_IdxRndCol` : textureMap
+- `osl_IdxRndFlt` : textureMap
+- `osl_IdxRndVec` : textureMap
+- `osl_Interpolate` : textureMap
+- `osl_LiftGammaGain` : textureMap
+- `osl_Mandelbrot` : textureMap
+- `osl_MatCapUV` : textureMap
+- `osl_MixColor` : textureMap
+- `osl_MixVector` : textureMap
+- `osl_MultiMixColor` : textureMap
+- `osl_Noise` : textureMap
+- `osl_Noise3D` : textureMap
+- `osl_Normal` : textureMap
+- `osl_OSLBitmap3` : textureMap
+- `osl_ObjectProjector2` : textureMap
+- `osl_OrganicNoise` : textureMap
+- `osl_PBRMixer` : textureMap
+- `osl_Process_OpacityMap` : textureMap
+- `osl_RadToDeg` : textureMap
+- `osl_RandomBitmaps3` : textureMap
+- `osl_RandomIndex2` : textureMap
+- `osl_RandomTilingBitmap` : textureMap
+- `osl_Rivets` : textureMap
+- `osl_SetColor` : textureMap
+- `osl_SetFile` : textureMap
+- `osl_SetFloat` : textureMap
+- `osl_SetInt` : textureMap
+- `osl_SetNumFile` : textureMap
+- `osl_SetString` : textureMap
+- `osl_SetVector` : textureMap
+- `osl_SimpleTiles` : textureMap
+- `osl_SmoothStepC` : textureMap
+- `osl_SpecGlosToPhysical` : textureMap
+- `osl_SphericalProjector2` : textureMap
+- `osl_Threads` : textureMap
+- `osl_ToonWidth` : textureMap
+- `osl_TriTone` : textureMap
+- `osl_UVWEnviron` : textureMap
+- `osl_UVWRandomizer2D` : textureMap
+- `osl_UVWRandomizer3D` : textureMap
+- `osl_UVWRowOffset` : textureMap
+- `osl_UVWTransform` : textureMap
+- `osl_UberBitmap2b` : textureMap
+- `osl_UberColorCorrect` : textureMap
+- `osl_UberNoise` : textureMap
+- `osl_VectorAdd` : textureMap
+- `osl_VectorCross` : textureMap
+- `osl_VectorDist` : textureMap
+- `osl_VectorDiv` : textureMap
+- `osl_VectorDot` : textureMap
+- `osl_VectorInv` : textureMap
+- `osl_VectorJuggler` : textureMap
+- ... and 14 more
+
+## Member drift in shared classes (153)
+
+- `A360_Cloud_Rendering` — only in B: Alpha
+- `AlembicCamera` — only in B: generationId, importCustomAttributes, playbackEndGen, playbackFrameGen, playbackStartGen, playbackTypeGen
+- `AlembicContainer` — only in B: iconScale, nodes, showIcon
+- `AlembicObject` — only in B: generationId, importCustomAttributes, importExtraChannels, importMaterialIDs, importNormals, importUVs, importVelocity, importVertexColors, playbackEndGen, playbackFrameGen, playbackStartGen, playbackTypeGen
+- `AlembicXform` — only in B: playbackEndGen, playbackFrameGen, playbackStartGen, playbackTypeGen
+- `Arc` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `AudioPosition` — only in A: end, objectEnable, objectNode, start
+- `Automatic_Exposure_Control` — only in A: brightess | only in B: brightness
+- `Awning` — only in A: Produce_Mapping_Coords | only in B: Generate_Mapping_Coords
+- `Bevel_Profile` — only in B: ClassicOrImproved, beveldepth, beveloffset, beveloptimize, bevelpush, bevelsteps, bevelwidth, capend, capendconstrain, capstart, capstartconstrain, captype, endbevelmaterial, endcapmaterial, extrudeamount, extrudesegments, sidematerial, startbevelmaterial, startcapmaterial, usebevelwidth
+- `BiFold` — only in A: Bevel, Produce_Mapping_Coords | only in B: Bevel_Angle, Generate_Mapping_Coords
+- `Blendfilter` — only in A: Mix | only in B: Blend
+- `Blizzard` — only in B: Bubble_Phase_Variation
+- `Block_Control` — only in B: index, indexMode
+- `Box` — only in B: typeInHeight, typeInLength, typeInPos, typeInWidth, typeinCreationMethod
+- `CATMotionHub2` — only in A: alphaReductionEnable, angle, angleRnd, anti, colorRangeB, colorRangeG, colorRangeR, colorRangeType, groove, grooveNum, hSpace, hSpaceRnd, linkLength, map, mapEnable, mapOpacity, noiseAmount, noiseAmountRandom, noiseCycle, noiseCycleRandom, noiseEnable, noiseMap, noiseMapEnable, noiseMapOpacity, noisePhase
+- `CV_Curve` — only in A: EDGES, angle, thickness | only in B: cap_segments, render_angle, render_angle2, render_length, render_sides, render_thickness, render_threshold, render_width, sphere_cap
+- `CV_Curveshape` — only in A: EDGES, angle, thickness | only in B: cap_segments, render_angle, render_angle2, render_length, render_sides, render_thickness, render_threshold, render_width, sphere_cap
+- `CV_Surf` — only in A: EDGES, angle, thickness | only in B: cap_segments, render_angle, render_angle2, render_length, render_sides, render_thickness, render_threshold, render_width, sphere_cap
+- `C_Ext` — only in A: heightsegs | only in B: Height_Segments, centerCreate, typeInBackLength, typeInBackWidth, typeInFrontLength, typeInFrontWidth, typeInHeight, typeInPos, typeInSideLength, typeInSideWidth, typeinCreationMethod
+- `CamMatchDataCustAttrib` — only in B: allow_distorted_view
+- `Camera_Map_Per_Pixel` — only in B: aspectMode, haspect, vaspect
+- `Cap_Holes` — only in A: Make_All_New_Edges_Visible, Smooth_New_Faces, Smooth_With_Old_Faces | only in B: sm_ends, smooth, triangulation_type, vis_edges
+- `Casement` — only in A: Produce_Mapping_Coords | only in B: Generate_Mapping_Coords, Opens_to_Inside, Panel_Width
+- `Chamfer` — only in B: addinset, amountType, angleFactorVertex, biasEndPoints, depth, depthType, forcePositiveOffset, insetType, insetamount, insetoffset, insetsegments, maxAmount, minAmount, miterEndBias, miteringType, presetOptionsComboBox, quadIntersectionMode, radiusBias, scale, useConstantOffset
+- `ChamferBox` — only in A: heightsegs | only in B: Height_Segments, typeInFillet, typeInHeight, typeInLength, typeInPos, typeInWidth, typeinCreationMethod
+- `ChamferCyl` — only in A: heightsegs | only in B: Height_Segments, Slice_From, Slice_To, sides, typeInFillet, typeInHeight, typeInPos, typeInRadius, typeinCreationMethod
+- `Circle` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `ClipAssigner` — only in A: masterblocks | only in B: driverblocks
+- `Cone` — only in B: typeInHeight, typeInPos, typeInRadius1, typeInRadius2, typeinCreationMethod
+- `Cylinder` — only in B: typeInHeight, typeInPos, typeInRadius, typeinCreationMethod
+- `Damper` — only in A: Produce_Mapping_Coords | only in B: Force, Generate_Mapping_Coordinates
+- `Daylight` — only in B: Sky_Cover
+- `DeleteSplineModifier` — only in A: addLineset, addObject, auto, effectName, refSceneMaterial, refSceneObject, xrefPriority
+- `DirectX_9_Shader` — only in B: migratedstingray
+- `Directionallight` — only in A: hsv
+- `Displace` — only in A: U_Tiling, V_Tiling | only in B: U_Tile, V_Tile
+- `Donut` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `Edit_Poly` — only in A: edgeChamferType | only in B: bevelFaceBias, chamferVertexDepth, chamferVertexSegments, chamferVertexSmooth, chamferVertexSmoothThreshold, chamferVertexSmoothType, edgeChamferDepth, edgeChamferEndBias, edgeChamferMiteringType, edgeChamferQuadIntersectionsOBSOLETE, edgeChamferRadialBias, edgeChamferTypeOBSOLETE, enableEnhancedHotkeyExtrude, enableEnhancedRetriangulation, extrudeFaceBias, ignoreOccluded, lastDeltaIndex
+- `Editable_Poly` — only in A: edgeChamferType | only in B: bevel_bias, chamferVertexDepth, chamferVertexSegments, chamferVertexSmooth, chamferVertexSmoothThreshold, chamferVertexSmoothType, edgeChamferDepth, edgeChamferEndBias, edgeChamferMiteringType, edgeChamferRadialBias, enableEnhancedHotkeyExtrude, enableEnhancedRetriangulation, extrude_bias, ignoreOccluded
+- `Egg` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `Ellipse` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `Event` — only in B: Inherit, Priority, X_Coord, Y_Coord, Z_Order, collapsed, width
+- `Face_Extrude` — only in A: Quantity | only in B: amount, scale
+- `Fire_Effect` — only in B: Samples
+- `Fixed` — only in A: Produce_Mapping_Coords | only in B: Generate_Mapping_Coords, Number_of_Panels_Horizontally, Number_of_Panels_Vertically
+- `Flex` — only in A: center | only in B: enableCenter
+- `Foliage` — only in A: trim | only in B: Pruning, levelOfDetail
+- `Gengon` — only in A: heightsegs | only in B: Height_Segments, sides
+- `Gradient_Ramp` — only in A: Quantity | only in B: amount
+- `HalfRound` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `Helix` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `Hose` — only in A: D_截面软管圆形分段, D_截面软管圆角分段, D_截面软管圆角大小, D_截面软管宽度, D_截面软管截面旋转, D_截面软管深度, Produce_Mapping_Coords | only in B: Bottom_Tension, D_Section_Hose_Depth, D_Section_Hose_Fillet_Segs, D_Section_Hose_Fillet_Size, D_Section_Hose_Round_Segs, D_Section_Hose_Section_Rotation, D_Section_Hose_Width, Flex_Cycle_Count, Flex_Section_Diameter, Flex_Section_Enabled, Flex_Section_Start, Flex_Section_Stop, Generate_Mapping_Coordinates, Hose_Cross_Section_Type, Hose_Height, Rectangular_Hose_Depth, Rectangular_Hose_Fillet_Segs, Rectangular_Hose_Fillet_Size, Rectangular_Hose_Section_Rotation, Rectangular_Hose_Width, Renderable_Hose, Round_Hose_Diameter, Round_Hose_Sides, Segments_Along_Hose, Top_Tension
+- `L_Ext` — only in A: heightsegs | only in B: Height_Segments, centerCreate, typeInFrontLength, typeInFrontWidth, typeInHeight, typeInPos, typeInSideLength, typeInSideWidth, typeinCreationMethod
+- `LinearShape` — only in A: EDGES, angle, thickness | only in B: cap_segments, render_angle, render_angle2, render_length, render_sides, render_thickness, render_threshold, render_width, sphere_cap
+- `Linear_Exposure_Control` — only in A: brightess | only in B: brightness
+- `LinkBlockInstance` — only in A: EDGES, angle, thickness | only in B: cap_segments, render_angle, render_angle2, render_length, render_sides, render_thickness, render_threshold, render_width, sphere_cap
+- `LinkBlockInstanceshape` — only in A: EDGES, angle, thickness | only in B: cap_segments, render_angle, render_angle2, render_length, render_sides, render_thickness, render_threshold, render_width, sphere_cap
+- `LinkLeaf` — only in A: EDGES, angle, thickness | only in B: cap_segments, render_angle, render_angle2, render_length, render_sides, render_thickness, render_threshold, render_width, sphere_cap
+- `LinkLeafshape` — only in A: EDGES, angle, thickness | only in B: cap_segments, render_angle, render_angle2, render_length, render_sides, render_thickness, render_threshold, render_width, sphere_cap
+- `MapScalerSpaceWarp` — only in B: scale
+- `Melt` — only in A: pivot | only in B: axis
+- `Motor` — only in A: START_TIME | only in B: Amplitude_1, Amplitude_2, On_Time
+- `NURBSCurveshape` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `Ngon` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `OilTank` — only in A: Mix, heightsegs | only in B: Blend, Height_Segments, Slice_From, Slice_To, sides
+- `Omnilight` — only in A: hsv
+- `OpenSubdiv` — only in A: fvarboundary, propagatecorners, update | only in B: fvarboundary3
+- `PArray` — only in B: Bubble_Amplitude, Bubble_Amplitude_Variation, Bubble_Period, Bubble_Period_Variation, Bubble_Phase, Bubble_Phase_Variation
+- `PBomb` — only in B: chaos
+- `PCloud` — only in B: Bubble_Amplitude, Bubble_Amplitude_Variation, Bubble_Period, Bubble_Period_Variation, Bubble_Phase, Bubble_Phase_Variation
+- `PathDeform` — only in A: pivot | only in B: axis
+- `Physical` — only in B: vertical_shift
+- `Physical_Camera_Exposure_Control` — only in B: use_physical_camera_controls, vignetting_amount, vignetting_enabled, white_balance_custom, white_balance_illuminant, white_balance_illuminant_colorpreview, white_balance_kelvin, white_balance_kelvin_colorpreview, white_balance_type
+- `Pipe` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `Pivoted` — only in A: Produce_Mapping_Coords | only in B: Generate_Mapping_Coords
+- `PointCloud` — only in A: sphereVolumeRadius, volumeObjectToWorld, volumeType, xRangeHigh, xRangeLow, yRangeHigh, yRangeLow, zRangeHigh, zRangeLow | only in B: PtsVisible
+- `Point_Cache` — only in A: loadTypeSlave | only in B: loadTypeNetwork
+- `Point_CacheSpacewarpModifier` — only in A: loadTypeSlave | only in B: loadTypeNetwork
+- `Point_Curve` — only in A: EDGES, angle, thickness | only in B: cap_segments, render_angle, render_angle2, render_length, render_sides, render_thickness, render_threshold, render_width, sphere_cap
+- `Point_Curveshape` — only in A: EDGES, angle, thickness | only in B: cap_segments, render_angle, render_angle2, render_length, render_sides, render_thickness, render_threshold, render_width, sphere_cap
+- `Point_Surf` — only in A: EDGES, angle, thickness | only in B: cap_segments, render_angle, render_angle2, render_length, render_sides, render_thickness, render_threshold, render_width, sphere_cap
+- `Point_SurfGeometry` — only in A: EDGES, angle, thickness | only in B: cap_segments, render_angle, render_angle2, render_length, render_sides, render_thickness, render_threshold, render_width, sphere_cap
+- `Poly_Select` — only in B: ignoreOccluded
+- `PolymorphicGeom` — only in A: EDGES, angle, thickness | only in B: cap_segments, render_angle, render_angle2, render_length, render_sides, render_thickness, render_threshold, render_width, sphere_cap
+- `PolymorphicGeomshape` — only in A: EDGES, angle, thickness | only in B: cap_segments, render_angle, render_angle2, render_length, render_sides, render_thickness, render_threshold, render_width, sphere_cap
+- `Prism` — only in B: typeInHeight, typeInPos, typeInSide1Length, typeInSide2Length, typeInSide3Length, typeinCreationMethod
+- `PushSpaceWarp` — only in A: START_TIME | only in B: Amplitude_1, Amplitude_2, On_Time
+- `Pyramid` — only in B: typeInDepth, typeInHeight, typeInPos, typeInWidth, typeinCreationMethod
+- `QuarterRound` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `Railing` — only in A: textureMap | only in B: Last_Picket_Spacing_to_Post, Last_Post_Offset, Texture_Mapped, Top_Rail_Spacing_to_Next_Rail
+- `RaytraceMaterial` — only in A: Diffusion, Local_Max_Rays, Reflection_Amount, Reflects, Specular_Color | only in B: Diffuse, Extra_Lighting, Local_Max__Rays, Options___Color_Density___Fog_Enable, Options___Raytrace_Atmospherics_in_Glass, Options___Raytrace_Objects_in_Glass, Options___Reflect_Refract_Material_ID_s, Reflect, Spec__Color, Static_Friction, UserParam0, UserParam1, reflect_amount, sampler, samplerAdaptOn, samplerAdaptThreshold, samplerAdvancedOptions, samplerByName, samplerEnable, samplerQuality, samplerUseGlobal, subSampleTextureOn
+- `Raytrace_Texture_ParamBlock` — only in B: Attenuation_Far, Bump_Multiplier, Filter_Density_Map_Amount, Fog_Enable, Fog_End, Fog_Map_Amount, Fog_Start, Local_Blur_Aspect, Options__Raytrace_Atmospherics_in_Glass, Options__Raytrace_Objects_in_Glass, Options__Reflect_Refract_Material_ID_s, Refractions_as_Glass_Enable, Tint_Map_Amount, Use_Fog_Map
+- `Rectangle` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `Relax` — only in A: Keep_Boundary_Pts_Fixed, Relax_Value | only in B: Boundary, PreserveVolume, Saddle, Value
+- `Renderable_Spline` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `STL_Check` — only in A: matIDs | only in B: Material_ID
+- `Scene_Effect_Loader` — only in B: SceneEnvEffects, ScenePostEffects, ScenePreEffects
+- `Select_the_Biped_for_use_as_a_retargeting_reference` — only in A: masterMaxClip | only in B: driverMaxClip
+- `Shell` — only in B: version
+- `SliceModifier` — only in B: Angle1, Angle2, Cap, Clean, MaterialID, PlanarFlipX, PlanarFlipY, PlanarFlipZ, PlanarX, PlanarY, PlanarZ, RadialAxis, Radial_Type, ReferenceObject, SetMaterial, SliceFormat
+- `SlidingDoor` — only in A: Bevel, Produce_Mapping_Coords | only in B: Bevel_Angle, Generate_Mapping_Coords
+- `SlidingWindow` — only in A: Produce_Mapping_Coords, alpha, blend, color, colorMap, colorMapEnable, colorMapOpacity, detail, detailDialogOpen, dialogOpen, size, sizeMap, sizeMapAmount, sizeMapEnable | only in B: Generate_Mapping_Coords, Number_of_Panels_Horizontally, Number_of_Panels_Vertically
+- `SpacePathDeform` — only in A: pivot | only in B: axis
+- `Spacedisplace` — only in A: U_Tiling, V_Tiling | only in B: U_Tile, V_Tile
+- `Sphere` — only in B: typeInPos, typeInRadius, typeinCreationMethod
+- `Spindle` — only in A: Mix, heightsegs | only in B: Blend, Height_Segments, Slice_From, Slice_To, sides
+- `Spiral_Stair` — only in A: ORIENTATION, rotation | only in B: Revolutions, direction
+- `SplineShape` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `Spring` — only in A: Produce_Mapping_Coords, turns | only in B: Generate_Mapping_Coordinates, Number_of_Turns
+- `SpringPoint3Controller` — only in B: effectHow, forceNode, start, steps, x_effect, y_effect, z_effect
+- `Squeeze` — only in A: offset | only in B: bias
+- `StPathClass` — only in A: EDGES, angle, thickness
+- `StandardTextureOutput` — only in B: enableColorMap, useRGBColorMap
+- `Star` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `Stretch` — only in A: pivot | only in B: axis
+- `SuperSpray` — only in B: Bubble_Amplitude, Bubble_Amplitude_Variation, Bubble_Period, Bubble_Period_Variation, Bubble_Phase, Bubble_Phase_Variation, Off_Axis, Off_Plane, Plane_Spread
+- `TargetDirectionallight` — only in A: hsv
+- `Teapot` — only in B: typeInPos, typeInRadius, typeinCreationMethod
+- `Tee` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `Torus` — only in B: typeInPos, typeInRadius1, typeInRadius2, typeinCreationMethod
+- `Torus_Knot` — only in A: U_Tiling, V_Tiling | only in B: U_Tile, V_Tile
+- `Tube` — only in B: typeInHeight, typeInPos, typeInRadius1, typeInRadius2, typeinCreationMethod
+- `UVW_Xform` — only in A: Swivel_Angle, U_Tiling, V_Tiling | only in B: Rotation_Angle, Rotation_Center, U_Tile, V_Tile
+- `U_Type_Stair` — only in A: ORIENTATION | only in B: direction
+- `Unwrap_UVW` — only in A: alignByPivotHorizontal, alignByPivotVertical, floaters, floatersVisible | only in B: OptimizeSurfAngle, TextureCheckerMaterial, unfoldAutoPack, unfoldBorderIntersection, unfoldFlipTriangle, unfoldIterations, unfoldMapSize, unfoldMethod, unfoldRoomSpace
+- `Vector_Map` — only in B: finiteresolution, restype
+- `Volume_Light` — only in A: Attenuation_End, Attenuation_Start | only in B: Atten__End, Atten__Start, Samples
+- `Wall` — only in A: Produce_Mapping_Coords | only in B: Generate_Mapping_Coords
+- `WalledRectangle` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `WideFlange` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `XForm` — only in B: PreserveNormals
+- `angle` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `channel` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `falloff` — only in A: gradOffsetAmount, gradOffsetEnable, gradOffsetMap, gradOffsetMapOffset, hiDesignAmount, hiDesignAngle, hiDesignEnable, lightColBlend, lightColEnable, lightColRelpaceColor, lightColRelpaceEnable, lightColReplaceAmount, lightcolAmount, lightcolZoneIDs, sblendAmount, sblendColor, sblendEnable, sblendMap, sblendMapEnable, sblendMapOpacity, sblendMode, specificLights, specificLightsEnable, specificLightsStrength, specificTranspEnable
+- `float_list` — only in B: index, indexMode
+- `freeSpot` — only in A: hsv
+- `grid` — only in B: activeColor, displayPlane
+- `line` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `mCloth` — only in A: useGroupBehavior
+- `pivot` — only in A: Bevel, Produce_Mapping_Coords | only in B: Bevel_Angle, Generate_Mapping_Coords, Open__degrees
+- `point3_list` — only in B: index, indexMode
+- `point4_list` — only in B: index, indexMode
+- `position_list` — only in B: index, indexMode
+- `projected` — only in A: Produce_Mapping_Coords | only in B: Generate_Mapping_Coords
+- `rotation_list` — only in B: index, indexMode
+- `scale_list` — only in B: index, indexMode
+- `section` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
+- `subdivide` — only in B: adaptiveEdgeLength, adaptiveRegularity, adaptiveThreshold, delaunayRelaxationCoeff, delaunayRelaxationIterations, delaunaySize, preserveMeshData, preserveSharpEdgesByAngle, preservedMapIndex, preservedSharpEdgeAngle, remeshType, subdivideDiagonalRatio, subdivideDoEnforceQuality, subdivideDoFormQuads, subdivideDoSubdivideTriangles, subdivideMaxSteinerPoints, subdivideNumBuckets, subdivideQuadAreaRatio, subdivideRefinementType, variableCurvatureEdgeLength, variableCurvatureIterations, variableCurvatureRegularity, variableCurvatureThreshold, variableCurvatureTransition, variableCurvatureVariableDensity
+- `subdivideSpacewarpModifier` — only in B: adaptiveEdgeLength, adaptiveRegularity, adaptiveThreshold, delaunayRelaxationCoeff, delaunayRelaxationIterations, delaunaySize, preserveMeshData, preserveSharpEdgesByAngle, preservedMapIndex, preservedSharpEdgeAngle, remeshType, subdivideDiagonalRatio, subdivideDoEnforceQuality, subdivideDoFormQuads, subdivideDoSubdivideTriangles, subdivideMaxSteinerPoints, subdivideNumBuckets, subdivideQuadAreaRatio, subdivideRefinementType, variableCurvatureEdgeLength, variableCurvatureIterations, variableCurvatureRegularity, variableCurvatureThreshold, variableCurvatureTransition, variableCurvatureVariableDensity
+- `symmetry` — only in B: EdgeCollapsePercent, PlanarFlipX, PlanarFlipY, PlanarFlipZ, PlanarX, PlanarY, PlanarZ, RadialAxis, RadialCount, RadialFlip, RadialMirror, ReferenceObject, SymmetryFormat, UseProximityThreshold
+- `targetSpot` — only in A: hsv
+- `text` — only in B: cap, cap_segments, quad_cap, sphere_cap, twist_correction
