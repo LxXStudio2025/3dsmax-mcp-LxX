@@ -97,27 +97,27 @@ MCP 侧暴露 15 个工具，`maxctl` 是同一套能力在命令行上的入口
 
 ## 可靠性设计
 
-这一层的东西都是踩出来的，改代码前值得先看一眼：
+修改这一层的代码前，先确认不违反下面这些约束：
 
-| 问题 | 现在的处理 |
+| 约束 | 内容 |
 |---|---|
-| **错误信息全丢** | MCP SDK 只回传 `ToolError` 的消息，其他异常一律判为崩溃、只回 `Error executing tool <name>`。所以 `MaxError` 继承 `ToolError`，并在末尾追加 `[max_error code=busy retryable=false]` |
-| **分不清「忙」和「死了」** | 看**任务有没有被 Max 取走**，不看轮询时间。脚本执行期间 Max 的 UI 线程被占死、根本无法 poll，健康的忙 Max 和崩溃的 Max 从轮询时间上完全一样 |
-| **结果回传丢失** | Max 端有界发件箱（16 条）：POST 失败就存下来，每个 tick 补投 1 条，3 次后丢弃。Python 侧超时后再等 5 秒宽限期接住补投的结果 |
-| **`max_check` 污染场景** | 用 `#nodeCreated` 回调只捕获探针自己建的对象（O(k)，不是全场景 diff），删不掉的列进 `leftover_side_effects` |
-| **静默覆盖文件** | `export` 默认拒绝覆盖已存在文件（要显式 `overwrite=True`）。`doesFileExist` 对**目录**也返回 true，所以路径校验放在 Python 侧用 `os.path.isdir` |
-| **临时文件泄漏** | `max_python` / `max_screenshot` 用完即删；进程首次调用时按 mtime 清扫历史残留 |
+| **错误必须继承 `ToolError`** | MCP SDK 只回传 `ToolError` 的消息，其他异常一律判为崩溃、只回 `Error executing tool <name>`。`MaxError` 因此继承 `ToolError`，并在末尾附加 `[max_error code=... retryable=...]` |
+| **忙/死判定看任务取走情况** | 脚本执行期间 Max 的 UI 线程被占，无法轮询，所以轮询间隔不能作为存活依据。任务还在队列里 = Max 没在轮询；任务已被取走 = Max 在跑 |
+| **结果重投有界** | Max 端发件箱上限 16 条，每 tick 补投 1 条，3 次后丢弃；发件箱满时停止取新任务。客户端需等待宽限期才能收到补投结果 |
+| **`max_check` 只清理自己创建的对象** | 通过 `#nodeCreated` 回调捕获，不扫描全场景。属性赋值、删除、文件写入不会被回滚，删不掉的对象列进 `leftover_side_effects` |
+| **文件操作默认拒绝覆盖** | `export` 需显式 `overwrite=True`。注意 MAXScript 的 `doesFileExist` 对目录也返回 true，路径校验必须在 Python 侧用 `os.path.isdir` |
+| **临时文件即用即删** | `max_python` / `max_screenshot` 用完即删；进程首次调用时按 mtime 清扫历史残留 |
 
-**判断连不上时的顺序**：`%TEMP%\maxmcp-launcher-<年份>.txt` 在不在 → `%TEMP%\maxmcp-boot-<年份>.log` 有没有 `boot finished` → 端口对不对。
+**连不上时的排查顺序**：`%TEMP%\maxmcp-launcher-<年份>.txt` 是否存在 → `%TEMP%\maxmcp-boot-<年份>.log` 有否 `boot finished` → 端口是否匹配。
 
 ## 已知限制
 
 | 限制 | 说明 |
 |---|---|
-| **POST 没有超时** | `WebClient` 不提供超时设置，`maxMcpHttpPost` 的 `timeout:` 参数实际无效。连接被拒绝是瞬时失败（常见情况），只有「服务器在但不响应」才会冻 UI 100 秒。换 `HttpWebRequest` 试过，`GetResponse()` 一律抛「请求被取消」，已放弃 |
-| **同版本多开** | 端口按发布年份推导，两个 2016 会抢 47100。可用 `MAXMCP_PORT` 显式指定不同端口绕开，但 Max 端不做自动端口分配 |
-| **主线程串行** | Max 一次跑一件事，长脚本冻 UI，**外部无法取消**，只能人在 Max 里按 ESC |
-| **`max_eval` 全开放** | 能执行任意代码，包括 `quitMax()`。没有白名单，靠 undo + 人复核 |
+| **POST 没有超时** | `WebClient` 不提供超时设置，`maxMcpHttpPost` 的 `timeout:` 参数无效。连接被拒绝是瞬时失败（常见情况），只有「服务端在位但不响应」才会冻结 UI 100 秒。`HttpWebRequest` 方案不可行：`GetResponse()` 会抛「请求被取消」 |
+| **同版本多开** | 端口按发布年份推导，两个 2016 会争用 47100。可用 `MAXMCP_PORT` 指定不同端口绕开，Max 端不做自动分配 |
+| **主线程串行** | Max 一次执行一个任务，长脚本冻结 UI 且**无法从外部取消**，只能在 Max 内按 ESC |
+| **`max_eval` 无限制** | 可执行任意代码，包括 `quitMax()`。没有白名单，只能靠 undo 与人工复核 |
 
 ## 端口规则
 
