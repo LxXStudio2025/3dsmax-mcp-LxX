@@ -341,10 +341,11 @@ class Bridge:
                 "the bridge state before sending it again."
             )
         raise MaxBusy(
-            f"3ds Max accepted the request but returned no result within "
+            f"3ds Max accepted this task but produced no result within "
             f"{timeout:.0f}s (+{_LATE_GRACE_S:.0f}s grace for a re-delivered result). "
-            "It is still polling, so it is alive and most likely executing a long "
-            "script or blocked by a modal dialog. "
+            "It had already picked the task up, so the script IS running, finished "
+            "without reporting, or is blocked by a modal dialog -- Max cannot poll "
+            "while it executes, which is why there is no further signal from here. "
             "THE SCRIPT MAY ALREADY HAVE CHANGED THE SCENE -- inspect before "
             "retrying, and press ESC in Max to abort the run."
         )
