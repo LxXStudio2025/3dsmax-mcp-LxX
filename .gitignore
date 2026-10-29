@@ -30,3 +30,9 @@ desktop.ini
 
 # 本地开发笔记（含 13 个坑、测量数据、架构原理），不随仓库分发
 NOTES.md
+
+# --- 运行时 API 快照 ---
+# 由 showClass "*.*" 从本机导出，包含这台机器上安装的每一个第三方插件类。
+# 换台机器内容就不同，对别人没有参考价值，还会暴露本地环境，所以只在本地生成：
+#   python tools/dump_api_snapshot.py   （或见 README 里的两条 maxctl 命令）
+tools/docs/api-snapshot-*.txt
