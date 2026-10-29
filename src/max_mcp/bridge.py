@@ -268,26 +268,37 @@ class Bridge:
                 if not task.event.is_set():
                     task.cancelled = True
                     with self._lock:
-                        self._inflight.pop(task.id, None)
-                    self._raise_no_result(timeout)
+                        # Did Max actually take the task off the queue? That is
+                        # the only reliable signal: while a script runs, Max's
+                        # UI thread is blocked and cannot poll, so last_poll_age
+                        # grows for a perfectly healthy, busy Max. Using it to
+                        # mean "restarted" reported a running script as a crash.
+                        was_taken = self._inflight.pop(task.id, None) is not None
+                    self._raise_no_result(timeout, was_taken)
         if not task.ok:
             raise MaxError(task.error or "unknown MAXScript error")
         return task.data
 
-    def _raise_no_result(self, timeout: float) -> None:
+    def _raise_no_result(self, timeout: float, was_taken: bool) -> None:
         """Raise the right error for a task that never answered.
 
-        Separate from call() so the grace-window re-check stays readable. Max
-        polling right now means it is alive and simply has not finished (or is
-        blocked by a modal dialog); no polling at all means it restarted.
+        `was_taken` is the discriminator, not last_poll_age: Max cannot poll
+        while it executes a script (single UI thread), so a busy Max looks
+        exactly like a dead one from the outside. Whether Max picked the task
+        up, however, is unambiguous -- it is in _inflight only after a poll.
         """
-        age = self.last_poll_age
-        if age is not None and age > 3.0:
+        if not was_taken:
+            age = self.last_poll_age
+            when = (
+                "has never polled this bridge"
+                if age is None
+                else f"last polled {age:.0f}s ago"
+            )
             raise MaxRestarted(
-                f"3ds Max stopped polling {age:.0f}s ago, so it exited, crashed, "
-                "or the bridge was stopped while this request was in flight. "
-                "The script may have partially executed -- inspect the scene "
-                "before re-running it. Nothing was retried automatically."
+                f"3ds Max never picked this task up ({when}), so it exited, crashed, "
+                "or the bridge was stopped before it could run. "
+                "Nothing was executed -- but nothing was retried either, so check "
+                "the bridge state before sending it again."
             )
         raise MaxBusy(
             f"3ds Max accepted the request but returned no result within "
