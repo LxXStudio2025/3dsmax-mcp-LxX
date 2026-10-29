@@ -155,15 +155,24 @@ def max_status() -> dict:
 
     Call this first in a session: it tells you whether Max is reachable, which
     scene is loaded, and what units the numbers in every other tool mean.
+
+    `pid` and `port` identify WHICH Max session answered. Several releases (or
+    two instances of one release on different ports) can be connected at once,
+    and a scene name alone does not tell them apart -- two untitled scenes look
+    identical.
     """
     script = """(
     local __yv = (maxVersion())[1]
     -- maxVersion() reports e.g. 18000 for 3ds Max 2016; 2016 = 18000/1000 + 1998
     local __year = ((__yv / 1000) + 1998) as integer
+    local __pid = 0
+    try ( __pid = ((dotNetClass "System.Diagnostics.Process").GetCurrentProcess()).Id ) catch()
     #(
         "bridge_version", (if __MAXMCP_VER == undefined then "?" else __MAXMCP_VER),
         "max_version", (__year as string),
         "max_build", ((maxVersion())[2] as string),
+        "pid", __pid,
+        "port", (if __MAXMCP_PORT == undefined then 0 else __MAXMCP_PORT),
         "scene_name", maxFileName,
         "scene_path", maxFilePath,
         "dirty", (getSaveRequired()),
