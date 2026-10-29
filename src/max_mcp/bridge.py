@@ -262,32 +262,41 @@ class Bridge:
             # Without this the outbox would be pointless: the task is popped
             # from _inflight below, so a late result would find nobody home.
             if not task.event.wait(_LATE_GRACE_S):
-                task.cancelled = True
-                with self._lock:
-                    self._inflight.pop(task.id, None)
-
-                # Distinguish "busy" from "gone": if Max is still polling right
-                # now, it is alive and simply has not finished (or is blocked by
-                # a dialog).
-                age = self.last_poll_age
-                if age is not None and age > 3.0:
-                    raise MaxRestarted(
-                        f"3ds Max stopped polling {age:.0f}s ago, so it exited, crashed, "
-                        "or the bridge was stopped while this request was in flight. "
-                        "The script may have partially executed -- inspect the scene "
-                        "before re-running it. Nothing was retried automatically."
-                    )
-                raise MaxBusy(
-                    f"3ds Max accepted the request but returned no result within "
-                    f"{timeout:.0f}s (+{_LATE_GRACE_S:.0f}s grace for a re-delivered "
-                    "result). It is still polling, so it is alive and most likely "
-                    "executing a long script or blocked by a modal dialog. "
-                    "THE SCRIPT MAY ALREADY HAVE CHANGED THE SCENE -- inspect before "
-                    "retrying, and press ESC in Max to abort the run."
-                )
+                # Re-check before giving up: the event can fire between the
+                # failed wait() returning and this line, and that result would
+                # otherwise be thrown away as a false "busy".
+                if not task.event.is_set():
+                    task.cancelled = True
+                    with self._lock:
+                        self._inflight.pop(task.id, None)
+                    self._raise_no_result(timeout)
         if not task.ok:
             raise MaxError(task.error or "unknown MAXScript error")
         return task.data
+
+    def _raise_no_result(self, timeout: float) -> None:
+        """Raise the right error for a task that never answered.
+
+        Separate from call() so the grace-window re-check stays readable. Max
+        polling right now means it is alive and simply has not finished (or is
+        blocked by a modal dialog); no polling at all means it restarted.
+        """
+        age = self.last_poll_age
+        if age is not None and age > 3.0:
+            raise MaxRestarted(
+                f"3ds Max stopped polling {age:.0f}s ago, so it exited, crashed, "
+                "or the bridge was stopped while this request was in flight. "
+                "The script may have partially executed -- inspect the scene "
+                "before re-running it. Nothing was retried automatically."
+            )
+        raise MaxBusy(
+            f"3ds Max accepted the request but returned no result within "
+            f"{timeout:.0f}s (+{_LATE_GRACE_S:.0f}s grace for a re-delivered result). "
+            "It is still polling, so it is alive and most likely executing a long "
+            "script or blocked by a modal dialog. "
+            "THE SCRIPT MAY ALREADY HAVE CHANGED THE SCENE -- inspect before "
+            "retrying, and press ESC in Max to abort the run."
+        )
 
     # ----------------------------------------------------------------- status
 

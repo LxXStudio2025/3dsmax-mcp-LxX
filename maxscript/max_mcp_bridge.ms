@@ -486,12 +486,18 @@ fn maxMcpTick sender ev =
         -- Deliver before pulling: a result that already happened is worth more
         -- than a fresh task. One per tick keeps the tick short -- posting is a
         -- blocking call on the UI thread.
-        if __MAXMCP_OUTBOX.count > 0 do maxMcpFlushOne()
+        local flushed = false
+        if __MAXMCP_OUTBOX.count > 0 do flushed = maxMcpFlushOne()
         -- Backpressure: a full outbox means the server is gone. Keep polling
         -- and every new task adds another undeliverable result; stop instead
         -- until the backlog drains, so the failure stays visible as "offline"
         -- rather than as a growing pile of side effects nobody can read.
         if __MAXMCP_OUTBOX.count < __MAXMCP_MAXOUTBOX do served = maxMcpTickBody()
+        -- A successful re-delivery counts as work. Otherwise the adaptive
+        -- poller sees "nothing served", drops to the 2 s idle tier, and a
+        -- backlog of 16 entries would take ~32 s to drain -- far longer than
+        -- any client is willing to wait for a late result.
+        if flushed and served == 0 do served = 1
     )
     catch ( __MAXMCP_LASTERR = getCurrentException(); maxMcpLogErr (__MAXMCP_LASTERR as string) )
     __MAXMCP_BUSY = false
