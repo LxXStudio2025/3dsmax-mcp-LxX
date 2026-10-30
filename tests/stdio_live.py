@@ -28,7 +28,9 @@ async def main() -> int:
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:
             init = await session.initialize()
-            info = getattr(init, "server_info", None) or getattr(init, "serverInfo", None)
+            info = getattr(init, "server_info", None) or getattr(
+                init, "serverInfo", None
+            )
             print("server:", info.name, "v" + (info.version or "?"))
 
             tools = await session.list_tools()

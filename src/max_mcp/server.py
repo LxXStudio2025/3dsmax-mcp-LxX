@@ -95,8 +95,10 @@ def build() -> MCPServer:
         f"sessions hold the same scene.\n\n"
     )
     body = INSTRUCTIONS.replace("Autodesk 3ds Max 2016", f"Autodesk 3ds Max {year}")
-    body = body.replace('max_status          -> confirm connection, units, what scene is open',
-                        'max_status          -> confirm connection, VERSION, units, what scene is open')
+    body = body.replace(
+        "max_status          -> confirm connection, units, what scene is open",
+        "max_status          -> confirm connection, VERSION, units, what scene is open",
+    )
 
     name = f"3dsmax{year}" if year != "unknown" else "3dsmax"
     mcp = MCPServer(name, instructions=header + body)
@@ -106,7 +108,10 @@ def build() -> MCPServer:
 
 def main() -> None:
     _tools.BRIDGE.start()
-    build().run()
+    try:
+        build().run()
+    finally:
+        _tools.BRIDGE.stop()
 
 
 if __name__ == "__main__":

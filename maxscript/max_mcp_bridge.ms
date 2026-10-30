@@ -18,11 +18,30 @@
 --  on 2016; clever versions do not.
 -- ============================================================================
 
-global __MAXMCP_VER      = "0.3.6"
+-- Stop and dispose the previous timer BEFORE overwriting its global reference.
+-- This also makes Scripting > Run Script safe when reloading the bridge.
+global __MAXMCP_TIMER
+if __MAXMCP_TIMER != undefined do
+(
+    try ( __MAXMCP_TIMER.Stop() ) catch()
+    try ( dotNet.removeAllEventHandlers __MAXMCP_TIMER ) catch()
+    try ( __MAXMCP_TIMER.Dispose() ) catch()
+)
+
+global __MAXMCP_VER      = "0.3.8"
 -- One port per Max release so several sessions can run side by side without
 -- stealing each other's tasks: 2016 -> 47100, 2025 -> 47109, 2027 -> 47111.
 global __MAXMCP_YEAR     = ((((maxVersion())[1]) / 1000) + 1998) as integer
 global __MAXMCP_PORT     = (47100 + (amax 0 (__MAXMCP_YEAR - 2016)))
+try
+(
+    local overridePort = systemTools.getEnvVariable "MAXMCP_PORT"
+    if overridePort != undefined and overridePort != "" do
+    (
+        local parsedPort = overridePort as integer
+        if parsedPort > 0 and parsedPort < 65536 do __MAXMCP_PORT = parsedPort
+    )
+) catch()
 global __MAXMCP_URL      = "http://127.0.0.1:" + (__MAXMCP_PORT as string)
 global __MAXMCP_TIMER    = undefined
 global __MAXMCP_BUSY     = false
@@ -116,6 +135,12 @@ fn maxMcpEsc s =
         r = substituteString r "\n" "\\n"
         r = substituteString r "\r" "\\r"
         r = substituteString r "\t" "\\t"
+        local hex = "0123456789abcdef"
+        for i = 1 to 31 where i != 9 and i != 10 and i != 13 do
+        (
+            local escaped = "\\u00" + hex[(i / 16) as integer + 1] + hex[(mod i 16) + 1]
+            r = substituteString r (bit.intAsChar i) escaped
+        )
     )
     r
 )
@@ -187,11 +212,13 @@ fn maxMcpJson v depth:0 maxItems:2000 =
         (
             if v == true then out = "true" else out = "false"
         )
-        else if cn == "Integer" or cn == "Int64" then
+        else if cn == "Integer" or cn == "Int64" or cn == "Integer64" or cn == "IntegerPtr" then
         (
-            local iv = 0
-            try ( iv = v as integer ) catch ( iv = 0 )
-            out = (iv as string)
+            -- Never narrow 64-bit values to MaxScript's 32-bit Integer.
+            out = v as string
+            out = substituteString out "L" ""
+            out = substituteString out "l" ""
+            out = substituteString out "P" ""
         )
         else if cn == "Float" or cn == "Double" then
         (
@@ -301,19 +328,33 @@ fn maxMcpHttpGet url timeout:500 =
 
 fn maxMcpHttpPost url body tid timeout:5000 =
 (
-    -- WebClient.UploadString does length + encoding + stream writing in one
-    -- call. Doing it by hand is a trap: HttpWebRequest.ContentLength needs the
-    -- byte count of a byte[], and MaxScript cannot read .Length off the array
-    -- that Encoding.GetBytes returns (it reports "unknown property: length"),
-    -- so the body gets truncated to a single byte and Python sees "{".
+    -- Use GetByteCount rather than byte[].Length (unavailable in Max 2016).
+    -- Unlike WebClient.UploadString, this honors the requested timeouts.
     local enc = dotNetObject "System.Text.UTF8Encoding" false
-    local wc = dotNetObject "System.Net.WebClient"
-    wc.Encoding = enc
-    try ( (wc.Headers).Set "X-Task-Id" (tid as string) ) catch()
-    try ( wc.Proxy = (dotNetClass "System.Net.GlobalProxySelection").GetEmptyWebProxy() ) catch()
-
-    local r = wc.UploadString url "POST" (body as string)
-    try ( wc.Dispose() ) catch()
+    local text = body as string
+    local bytes = enc.GetBytes text
+    local req = (dotNetClass "System.Net.WebRequest").Create url
+    maxMcpPrepare req timeout:timeout
+    req.Method = "POST"
+    req.ContentType = "application/json; charset=utf-8"
+    req.ContentLength = dotNetObject "System.Int64" (enc.GetByteCount text)
+    (req.Headers).Set "X-Task-Id" (tid as string)
+    local stream = undefined
+    local response = undefined
+    local failure = undefined
+    try
+    (
+        stream = req.GetRequestStream()
+        stream.Write bytes 0 (enc.GetByteCount text)
+        stream.Close()
+        stream = undefined
+        response = req.GetResponse()
+    )
+    catch (failure = getCurrentException())
+    if stream != undefined do try (stream.Close()) catch()
+    if response != undefined do try (response.Close()) catch()
+    try (req.Abort()) catch()
+    if failure != undefined do throw failure
     true
 )
 
@@ -518,7 +559,8 @@ fn maxMcpStop =
     if __MAXMCP_TIMER != undefined do
     (
         try ( __MAXMCP_TIMER.Stop() ) catch()
-        try ( dotNet.removeEventHandler __MAXMCP_TIMER "Tick" ) catch()
+        try ( dotNet.removeAllEventHandlers __MAXMCP_TIMER ) catch()
+        try ( __MAXMCP_TIMER.Dispose() ) catch()
         __MAXMCP_TIMER = undefined
     )
     format "[max2016-mcp] bridge stopped\n"

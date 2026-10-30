@@ -95,13 +95,15 @@ class FakeMax(threading.Thread):
                 if self.stop_flag.is_set():
                     return
                 try:
-                    with urllib.request.urlopen(f"{self.base}/poll", timeout=0.5) as resp:
+                    with urllib.request.urlopen(
+                        f"{self.base}/poll", timeout=0.5
+                    ) as resp:
                         tid = resp.headers.get("X-Task-Id", "-")
                         resp.read()
                 except Exception:
                     time.sleep(0.05)
                     continue
-                if tid == "-":
+                if not tid or tid == "-":
                     return
             return
 
@@ -113,7 +115,7 @@ class FakeMax(threading.Thread):
             except Exception:
                 time.sleep(0.05)
                 continue
-            if tid == "-":
+            if not tid or tid == "-":
                 time.sleep(0.05)
                 continue
             if self.mode == "swallow":
@@ -121,7 +123,9 @@ class FakeMax(threading.Thread):
             if self.mode == "late":
                 time.sleep(self.delay)
             payload = json.dumps({"ok": True, "data": "answered"}).encode()
-            req = urllib.request.Request(f"{self.base}/result", data=payload, method="POST")
+            req = urllib.request.Request(
+                f"{self.base}/result", data=payload, method="POST"
+            )
             req.add_header("X-Task-Id", tid)
             req.add_header("Content-Type", "application/json")
             try:
@@ -168,7 +172,11 @@ def test_busy_vs_restarted() -> None:
         isinstance(r.get("exc"), MaxBusy),
         f"got {type(r.get('exc')).__name__}",
     )
-    check("grace window was actually waited", r.get("secs", 0) >= 5.9, f"{r.get('secs'):.1f}s")
+    check(
+        "grace window was actually waited",
+        r.get("secs", 0) >= 5.9,
+        f"{r.get('secs'):.1f}s",
+    )
 
     r = run_case(47191, "idle", timeout=1)
     check(
@@ -183,7 +191,11 @@ def test_grace_window() -> None:
     # Answers 2 s after a 1 s timeout: within the 5 s grace, so no error at all.
     r = run_case(47192, "late", timeout=1, delay=2.0)
     check("late answer -> no exception", r.get("exc") is None, repr(r.get("exc")))
-    check("late answer -> value returned", r.get("value") == "answered", repr(r.get("value")))
+    check(
+        "late answer -> value returned",
+        r.get("value") == "answered",
+        repr(r.get("value")),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -207,9 +219,12 @@ def test_max_check_script() -> None:
         tools.call = original
 
     s = captured["script"]
-    check("installs #nodeCreated callback", 'callbacks.addScript #nodeCreated' in s)
+    check("installs #nodeCreated callback", "callbacks.addScript #nodeCreated" in s)
     check("uses notificationParam, not $", "callbacks.notificationParam()" in s)
-    check("always removes the callback", s.count("callbacks.removeScripts id:#mcpProbe") == 2)
+    check(
+        "always removes the callback",
+        s.count("callbacks.removeScripts id:#mcpProbe") == 2,
+    )
     check("verifies deletion with isValidNode", "isValidNode" in s)
     check("no whole-scene diff", "objects as array" not in s)
     check("reports removed", out["removed_side_effects"] == ["Box001"])
@@ -232,10 +247,22 @@ def test_file_guard() -> None:
     tools.call = exploding_call
     try:
         cases = [
-            ("export over an existing file", lambda: tools.max_file_io("export", __file__)),
-            ("import a directory", lambda: tools.max_file_io("import", tempfile.gettempdir())),
-            ("export into a missing dir", lambda: tools.max_file_io("export", "C:/__nope__/a.fbx")),
-            ("import a missing file", lambda: tools.max_file_io("import", "C:/__nope__/a.fbx")),
+            (
+                "export over an existing file",
+                lambda: tools.max_file_io("export", __file__),
+            ),
+            (
+                "import a directory",
+                lambda: tools.max_file_io("import", tempfile.gettempdir()),
+            ),
+            (
+                "export into a missing dir",
+                lambda: tools.max_file_io("export", "C:/__nope__/a.fbx"),
+            ),
+            (
+                "import a missing file",
+                lambda: tools.max_file_io("import", "C:/__nope__/a.fbx"),
+            ),
         ]
         for label, fn in cases:
             try:
@@ -252,7 +279,10 @@ def test_file_guard() -> None:
     try:
         tools.max_file_io("export", __file__, overwrite=True)
     except MaxError as exc:
-        check("overwrite=True is not blocked by the guard", "refusing to overwrite" not in str(exc))
+        check(
+            "overwrite=True is not blocked by the guard",
+            "refusing to overwrite" not in str(exc),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -316,7 +346,10 @@ def main() -> int:
     test_sweep()
     test_port_collision()
 
-    print("\nRESULT:", "PASS" if not FAILURES else f"{len(FAILURES)} FAILURE(S): {FAILURES}")
+    print(
+        "\nRESULT:",
+        "PASS" if not FAILURES else f"{len(FAILURES)} FAILURE(S): {FAILURES}",
+    )
     return 0 if not FAILURES else 1
 
 

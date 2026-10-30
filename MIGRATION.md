@@ -113,16 +113,16 @@ Credits、Known limitations、TODO。**足够冷启动，不需要旧会话上�
 
 | 项 | 值 |
 |---|---|
-| bridge 版本 | **0.3.5**（已装进 Max，但**未重启验证**） |
+| bridge 版本 | **0.3.8**（源码目录已更新，需重新 install 并重启 Max 生效） |
 | 支持版本 | 2016（实测）、2025（实测）、2027 及以下（理论兼容，未验） |
 | 端口规则 | `47100 + (年份 - 2016)` → 2016=47100、2025=47109 |
 | 工具数 | 15 个 MCP 工具 + `maxctl` CLI |
 | 本地文档 | 2025 语料 2591 页 / 1.3 MB（`max_doc` 用）；2016 正文不可得 |
 | API 快照 | 2016 = 2066 类 / 37,051 成员；2025 = 1748 类 / 15,585 成员 |
 | 跨版本差异 | 仅 2016 有 732 类、仅 2025 有 414 类、153 类成员漂移 |
-| git | 4 commits，已推送至 `https://github.com/LxXStudio2025/3dsmax-mcp-LxX`（public，MIT） |
-| 未完成 | 结果回传非幂等（双执行风险）、同版本多开端口冲突 |
+| 验证入口 | `python tools\check.py`（ruff + 格式 + unittest + 冒烟 + 协议回归，单退出码） |
+| git | 已推送至 `https://github.com/LxXStudio2025/3dsmax-mcp-LxX`（public，MIT） |
+| 已知限制 | 同版本多开抢占端口；POST 无超时（WebClient 无此设置） |
 
-`0.3.5` 的改动（自适应轮询修复、`port` 默认值、两个状态宏）**需要重启 Max 才会生效**，
-新会话第一次连上时如果看到 `bridge_version 0.3.3`，说明加载的还是旧脚本，重跑一次
-`tools\install.py --install` 再重启 Max。
+`0.3.8` 的改动**需要重新执行 `tools\install.py --install` 并重启 Max**，
+新会话第一次连上时如果 `max_status` 里的 `bridge_version` 不是 `0.3.8`，说明加载的还是旧脚本。

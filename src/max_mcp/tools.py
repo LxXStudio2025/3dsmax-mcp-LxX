@@ -21,6 +21,10 @@ import uuid
 from typing import Any
 
 from .bridge import Bridge, MaxError
+from .maxscript import finite_number as _finite_number
+from .maxscript import mxs_list as mxs_list
+from .maxscript import mxs_lit as mxs_lit
+from .maxscript import mxs_str as mxs_str
 
 BRIDGE = Bridge(port=int(os.environ.get("MAXMCP_PORT", "47100")))
 SHOT_DIR = os.path.join(tempfile.gettempdir(), "max-mcp")
@@ -63,51 +67,6 @@ def _sweep_temp(max_age_hours: float = 6.0) -> None:
 # ---------------------------------------------------------------------------
 # MAXScript literal helpers
 # ---------------------------------------------------------------------------
-
-
-def mxs_str(value: str) -> str:
-    """Render a Python string as a MAXScript string literal."""
-    s = str(value)
-    s = s.replace("\\", "\\\\")
-    s = s.replace('"', '\\"')
-    s = s.replace("\n", "\\n")
-    s = s.replace("\r", "\\r")
-    s = s.replace("\t", "\\t")
-    return f'"{s}"'
-
-
-def mxs_lit(value: Any) -> str:
-    """Render a Python value as a MAXScript literal."""
-    if value is None:
-        return "undefined"
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if isinstance(value, (int, float)):
-        return repr(value)
-    if isinstance(value, str):
-        return mxs_str(value)
-    if isinstance(value, (list, tuple)):
-        numeric = all(
-            isinstance(v, (int, float)) and not isinstance(v, bool) for v in value
-        )
-        if numeric and len(value) == 3:
-            return "[{}, {}, {}]".format(*[repr(float(v)) for v in value])
-        items = []
-        for v in value:
-            if isinstance(v, str):
-                items.append(mxs_str(v))
-            elif isinstance(v, bool):
-                items.append("true" if v else "false")
-            elif v is None:
-                items.append("undefined")
-            else:
-                items.append(mxs_lit(v))
-        return "#(" + ", ".join(items) + ")"
-    return mxs_str(str(value))
-
-
-def mxs_list(values: list[Any]) -> str:
-    return "#(" + ", ".join(mxs_str(v) for v in values) + ")"
 
 
 def lookup_block(var: str, name_expr: str, tag: str = "a") -> str:
@@ -552,20 +511,21 @@ def max_create_object(
     """
     kind_l = (kind or "").lower().strip()
     params = params or {}
-    pos = pos or [0.0, 0.0, 0.0]
+    if pos is None:
+        pos = [0.0, 0.0, 0.0]
+    if not isinstance(pos, (list, tuple)) or len(pos) != 3:
+        raise ValueError("pos must contain exactly three finite numbers")
+    pos = [_finite_number(v, "pos") for v in pos]
 
     if kind_l == "import":
         path = params.get("path", "")
-        if not path:
+        if not isinstance(path, str) or not path.strip():
             raise ValueError("kind='import' requires params={'path': ...}")
-        script = f"""(
-    local __p = {mxs_str(path)}
-    if not (doesFileExist __p) do throw ("file not found: " + __p)
-    local __b = objects.count
-    importFile __p #noPrompt
-    #("imported", (objects.count - __b), "path", __p)
-)"""
-        return flat_to_dict(call(script, timeout=600))
+        result = max_file_io("import", path)
+        return {
+            "imported": result.get("added", 0),
+            "path": result.get("path", os.path.abspath(path)),
+        }
 
     if kind_l not in _PRIMITIVES:
         raise ValueError(
@@ -574,17 +534,21 @@ def max_create_object(
 
     fmt = {"w": 100.0, "l": 100.0, "h": 100.0, "r": 50.0, "r2": 10.0}
     for k, v in params.items():
-        fmt[k] = float(v)
+        if k not in fmt:
+            raise ValueError(f"unknown size parameter: {k}")
+        fmt[k] = _finite_number(v, f"params.{k}")
 
     body = _PRIMITIVES[kind_l].format(
         **fmt, pos=f"[{float(pos[0])}, {float(pos[1])}, {float(pos[2])}]"
     )
 
     script = f"""(
+    undo "MCP: create object" on (
     local __n = {body}
     local __want = {mxs_str(name)}
     if __want != "" do ( try ( __n.name = __want ) catch() )
     #("created", __n.name, "class", ((classof __n) as string), "pos", __n.pos)
+    )
 )"""
     return flat_to_dict(call(script, timeout=60))
 
@@ -621,60 +585,66 @@ def max_python(code: str, timeout_seconds: float = 30.0) -> Any:
     script_path = os.path.join(SHOT_DIR, f"py_{rid}.py")
     out_path = os.path.join(SHOT_DIR, f"py_{rid}.json")
 
-    # base64 keeps the payload ASCII, so no quoting/encoding can corrupt it.
-    # Decode to a str first: Max 2016 runs Python 2.7 (where exec takes a
-    # statement), Max 2025 runs Python 3.11 (where exec needs str, not bytes).
-    # compile()+exec() as a call works on both.
+    # base64 = ASCII-safe payload. compile()+exec() is the only form valid on
+    # both Py2.7 (2016) and Py3.11 (2025).
     payload = base64.b64encode(code.encode("utf-8")).decode("ascii")
-    wrapper = "\n".join([
-        "import base64, json, sys, traceback",
-        "_g = {'__name__': '__main__'}",
-        "class _Cap(object):",
-        "    def __init__(self): self.parts = []",
-        "    def write(self, s):",
-        "        if not isinstance(s, type(u'')):",
-        "            try:",
-        "                s = s.decode('utf-8', 'replace')",
-        "            except Exception:",
-        "                s = u'<undecodable>'",
-        "        self.parts.append(s)",
-        "    def flush(self): pass",
-        "    def getvalue(self): return u''.join(self.parts)",
-        "_o, _e = sys.stdout, sys.stderr",
-        "_cap_o, _cap_e = _Cap(), _Cap()",
-        "_res = {'ok': True, 'result': None, 'stdout': u'', 'stderr': u''}",
-        "try:",
-        "    _src = base64.b64decode({payload}).decode('utf-8')".format(payload=repr(payload)),
-        "    sys.stdout, sys.stderr = _cap_o, _cap_e",
-        "    try:",
-        "        exec(compile(_src, '<mcp>', 'exec'), _g)",
-        "        _res['result'] = _g.get('result')",
-        "    finally:",
-        "        sys.stdout, sys.stderr = _o, _e",
-        "except Exception:",
-        "    _res['ok'] = False",
-        "    _res['error'] = traceback.format_exc()",
-        "_res['stdout'] = _cap_o.getvalue()",
-        "_res['stderr'] = _cap_e.getvalue()",
-        "def _enc(x):",
-        "    if isinstance(x, bytes):",
-        "        for e in ('utf-8', 'gbk', 'latin-1'):",
-        "            try:",
-        "                return x.decode(e)",
-        "            except Exception:",
-        "                continue",
-        "        return x.decode('utf-8', 'replace')",
-        "    return x",
-        "_res = dict((k, _enc(v)) for k, v in _res.items())",
-        "json.dump(_res, open({out!r}, 'w'), default=_enc)".format(out=out_path),
-    ]) + "\n"
+    wrapper = (
+        "\n".join(
+            [
+                "import base64, json, sys, traceback",
+                "_g = {'__name__': '__main__'}",
+                "class _Cap(object):",
+                "    def __init__(self): self.parts = []",
+                "    def write(self, s):",
+                "        if not isinstance(s, type(u'')):",
+                "            try:",
+                "                s = s.decode('utf-8', 'replace')",
+                "            except Exception:",
+                "                s = u'<undecodable>'",
+                "        self.parts.append(s)",
+                "    def flush(self): pass",
+                "    def getvalue(self): return u''.join(self.parts)",
+                "_o, _e = sys.stdout, sys.stderr",
+                "_cap_o, _cap_e = _Cap(), _Cap()",
+                "_res = {'ok': True, 'result': None, 'stdout': u'', 'stderr': u''}",
+                "try:",
+                "    _src = base64.b64decode({payload}).decode('utf-8')".format(
+                    payload=repr(payload)
+                ),
+                "    sys.stdout, sys.stderr = _cap_o, _cap_e",
+                "    try:",
+                "        exec(compile(_src, '<mcp>', 'exec'), _g)",
+                "        _res['result'] = _g.get('result')",
+                "    finally:",
+                "        sys.stdout, sys.stderr = _o, _e",
+                "except Exception:",
+                "    _res['ok'] = False",
+                "    _res['error'] = traceback.format_exc()",
+                "_res['stdout'] = _cap_o.getvalue()",
+                "_res['stderr'] = _cap_e.getvalue()",
+                "def _enc(x):",
+                "    if isinstance(x, bytes):",
+                "        for e in ('utf-8', 'gbk', 'latin-1'):",
+                "            try:",
+                "                return x.decode(e)",
+                "            except Exception:",
+                "                continue",
+                "        return x.decode('utf-8', 'replace')",
+                "    return x",
+                "_res = dict((k, _enc(v)) for k, v in _res.items())",
+                "json.dump(_res, open({out!r}, 'w'), default=_enc)".format(
+                    out=out_path
+                ),
+            ]
+        )
+        + "\n"
+    )
     with open(script_path, "w", encoding="utf-8") as fh:
         fh.write(wrapper)
 
-    p = script_path.replace("\\", "\\\\")
     envelope = None
     try:
-        call(f'python.ExecuteFile @"{p}"', timeout=timeout_seconds)
+        call(f"python.ExecuteFile {mxs_str(script_path)}", timeout=timeout_seconds)
         if os.path.isfile(out_path):
             with open(out_path, encoding="utf-8") as fh:
                 envelope = json.load(fh)
@@ -685,10 +655,8 @@ def max_python(code: str, timeout_seconds: float = 30.0) -> Any:
             os.remove(script_path)
         except OSError:
             pass
-        # The result file is NOT. On a timeout Max is still running and writes
-        # out_path *after* we gave up; deleting it now only makes it reappear
-        # later as an orphan nobody will ever look at again. Delete it solely
-        # on the success path and let _sweep_temp() collect the rest.
+        # On timeout Max writes out_path after we gave up; delete only on
+        # success and let _sweep_temp() collect the orphan.
         if envelope is not None:
             try:
                 os.remove(out_path)
@@ -740,26 +708,29 @@ def max_api(class_name: str, pattern: str = "*") -> dict:
     script = f"""(
     local __f = createFile "{p}"
     local __ok = false
-    try ( showClass "{mxs_str(class_name)[1:-1]}.{pattern}" to:__f ; __ok = true ) catch()
+    try ( showClass {mxs_str(class_name + "." + pattern)} to:__f ; __ok = true ) catch()
     try ( close __f ) catch()
     __ok
 )"""
-    ok = call(script, timeout=30)
-    if not ok:
-        raise MaxError(f"showClass failed for '{class_name}' -- class may not exist in this Max")
-
-    text = ""
-    for enc in ("gbk", "utf-8", "latin-1"):
-        try:
-            with open(path, encoding=enc) as fh:
-                text = fh.read()
-            break
-        except (UnicodeDecodeError, LookupError):
-            continue
     try:
-        os.remove(path)
-    except OSError:
-        pass
+        ok = call(script, timeout=30)
+        if not ok:
+            raise MaxError(
+                f"showClass failed for '{class_name}' -- class may not exist in this Max"
+            )
+        text = ""
+        for enc in ("utf-8-sig", "gbk", "latin-1"):
+            try:
+                with open(path, encoding=enc) as fh:
+                    text = fh.read()
+                break
+            except (UnicodeDecodeError, LookupError):
+                continue
+    finally:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
 
     members: list[dict] = []
     header = ""
@@ -815,38 +786,25 @@ def max_check(expressions: list[str], timeout_seconds: float = 60.0) -> dict:
                      ["(Box()).wirecolor", "(Box()).custom_attr", "units.SystemType"].
         timeout_seconds: how long to wait before giving up.
     """
-    # Catch new nodes with a scene callback instead of diffing the whole scene.
-    #
-    # The obvious approach -- snapshot `objects` and compare afterwards -- is
-    # O(N^2) in MAXScript (no hash tables) and measured at 30-120 s on a 50k
-    # object scene, i.e. unusable on exactly the files where a mistake is most
-    # expensive. #nodeCreated fires per created node and hands it over via
-    # notificationParam(), so the cost is O(k) where k is what the probe built
-    # (verified on 2016: the callback sees the new node itself, `$` does not).
-    #
-    # MAXScript has no try/finally, so the callback is torn down in three
-    # places: defensively before installing, on the normal path, and again if
-    # the guarded block throws. A leaked #nodeCreated callback would keep
-    # appending every future node into a global array forever.
+    # #nodeCreated = O(k). A whole-scene diff is O(N^2) (no hash tables) and
+    # freezes the UI. Callback removed before install, on the normal path, and
+    # after a throw: MAXScript has no try/finally.
     script_parts = [
         "(",
         "    global __mcp_probe_new = #()",
         "    __mcp_probe_new = #()",
         "    local __res = #()",
         "    local __r",
-        "    local __boom = \"\"",
+        '    local __boom = ""',
         "    try ( callbacks.removeScripts id:#mcpProbe ) catch ()",
-        # Must stay on ONE line: MAXScript ends the statement at the line break,
-        # so `callbacks.addScript #nodeCreated` followed by the callback string
-        # on the next line is a call with no arguments ("needs a string or
-        # fileName: argument"). Verified on 2016.
-        "    callbacks.addScript #nodeCreated \"append __mcp_probe_new (callbacks.notificationParam())\" id:#mcpProbe",
+        # Must be one line: MAXScript ends the statement at the line break.
+        '    callbacks.addScript #nodeCreated "append __mcp_probe_new (callbacks.notificationParam())" id:#mcpProbe',
         "    try (",
     ]
     for expr in expressions:
-        script_parts.append("    __r = #(false, \"\")")
+        script_parts.append('    __r = #(false, "")')
         script_parts.append(
-            f"    try ( ( {expr} ) ; __r = #(true, \"\") )"
+            f'    try ( ( {expr} ) ; __r = #(true, "") )'
             f" catch ( __r = #(false, (getCurrentException() as string)) )"
         )
         script_parts.append("    append __res __r")
@@ -877,7 +835,11 @@ def max_check(expressions: list[str], timeout_seconds: float = 60.0) -> dict:
     boom = raw[3] if isinstance(raw, list) and len(raw) > 3 else ""
     out = []
     for i, expr in enumerate(expressions):
-        entry = results[i] if isinstance(results, list) and i < len(results) else [False, "no result"]
+        entry = (
+            results[i]
+            if isinstance(results, list) and i < len(results)
+            else [False, "no result"]
+        )
         ok = bool(entry[0]) if isinstance(entry, list) else False
         err = entry[1] if isinstance(entry, list) and len(entry) > 1 else ""
         out.append({"expression": expr, "ok": ok, "error": None if ok else err})
@@ -956,7 +918,9 @@ def max_api_search(keyword: str, limit: int = 60, refresh: bool = False) -> dict
                 if len(matches) >= limit:
                     truncated = True
                     break
-                matches.append({"class": current_class, "member": member, "type": m.group(2)})
+                matches.append(
+                    {"class": current_class, "member": member, "type": m.group(2)}
+                )
             continue
         if ":" in stripped:
             current_class = stripped.split(":", 1)[0].split("(")[0].strip()
@@ -1106,6 +1070,10 @@ def capture_to_file(
     Split out from max_screenshot so the CLI can write wherever the user asked
     instead of going through the MCP image content type.
     """
+    if render:
+        for label, value in (("width", width), ("height", height)):
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ValueError(f"{label} must be a positive integer")
     if out_path:
         path = os.path.abspath(out_path)
         if os.path.isdir(path):
@@ -1121,13 +1089,11 @@ def capture_to_file(
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     else:
         os.makedirs(SHOT_DIR, exist_ok=True)
-        path = os.path.join(SHOT_DIR, f"shot_{int(time.time() * 1000)}.png")
-
-    p = path.replace("\\", "\\\\")
+        path = os.path.join(SHOT_DIR, f"shot_{uuid.uuid4().hex}.png")
 
     if render:
         script = f"""(
-    local __p = "{p}"
+    local __p = {mxs_str(path)}
     local __bmp = render outputwidth:{int(width)} outputheight:{int(height)} vfb:false
     __bmp.filename = __p
     save __bmp
@@ -1136,7 +1102,7 @@ def capture_to_file(
 )"""
     else:
         script = f"""(
-    local __p = "{p}"
+    local __p = {mxs_str(path)}
     local __bmp = undefined
     try ( __bmp = gw.getViewportDib() ) catch()
     if __bmp == undefined do throw "gw.getViewportDib() returned nothing - is a viewport active?"
@@ -1148,7 +1114,9 @@ def capture_to_file(
 
     returned = call(script, timeout=180)
     if not os.path.isfile(path):
-        raise MaxError(f"capture finished but no file at {path} (Max said {returned!r})")
+        raise MaxError(
+            f"capture finished but no file at {path} (Max said {returned!r})"
+        )
     return path
 
 
@@ -1206,6 +1174,8 @@ def max_file_io(
     if act not in ("import", "export", "merge"):
         raise ValueError("action must be import | export | merge")
 
+    if not isinstance(path, str) or not path.strip():
+        raise ValueError("path must not be empty")
     target = os.path.abspath(path)
     # MAXScript's doesFileExist() returns true for DIRECTORIES as well, so the
     # guard inside the snippet cannot tell a folder from a file. Check here.
@@ -1225,25 +1195,28 @@ def max_file_io(
 
     if act == "import":
         script = f"""(
-    local __p = {mxs_str(path)}
+    local __p = {mxs_str(target)}
     if not (doesFileExist __p) do throw ("file not found: " + __p)
     local __b = objects.count
-    importFile __p #noPrompt
+    local __success = importFile __p #noPrompt
+    if __success != true do throw ("import failed: " + __p)
     #("ok", true, "added", (objects.count - __b), "path", __p)
 )"""
     elif act == "merge":
         script = f"""(
-    local __p = {mxs_str(path)}
+    local __p = {mxs_str(target)}
     if not (doesFileExist __p) do throw ("file not found: " + __p)
     local __b = objects.count
-    mergeMAXFile __p #noPrompt
+    local __success = mergeMAXFile __p #noPrompt
+    if __success != true do throw ("merge failed: " + __p)
     #("ok", true, "added", (objects.count - __b), "path", __p)
 )"""
     elif act == "export":
         flag = "true" if selected_only else "false"
         script = f"""(
-    local __p = {mxs_str(path)}
-    exportFile __p #noPrompt selectedOnly:{flag}
+    local __p = {mxs_str(target)}
+    local __success = exportFile __p #noPrompt selectedOnly:{flag}
+    if __success != true do throw ("export failed: " + __p)
     local __sz = 0
     if (doesFileExist __p) do __sz = (getFileSize __p)
     #("ok", (doesFileExist __p), "path", __p, "bytes", __sz)

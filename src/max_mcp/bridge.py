@@ -23,11 +23,14 @@ only thing the Max side must implement is a JSON *encoder*, not a parser.
 from __future__ import annotations
 
 import json
-import queue
+import math
+import os
+import socket
 import threading
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlsplit
 
 from .compat import ToolError
 
@@ -83,15 +86,35 @@ class MaxRestarted(MaxError):
 # Compat alias -- older call sites catch MaxTimeout.
 MaxTimeout = MaxBusy
 
-# How long to keep waiting after `timeout` for a result Max had to re-deliver.
-# Max pushes undelivered results back one per timer tick (100 ms when active,
-# 2 s when idle), so anything longer than a couple of idle ticks is waste; the
-# outbox holds 16 entries, so a full backlog needs at most a few seconds more.
+# Post-timeout wait for an outbox re-delivery: 1 result per tick, outbox max 16,
+# idle tick 2 s.
 _LATE_GRACE_S = 5.0
 
 
+class _BridgeHTTPServer(ThreadingHTTPServer):
+    # Windows SO_REUSEADDR lets competing servers bind the same live port.
+    allow_reuse_address = os.name != "nt"
+
+    def server_bind(self) -> None:
+        if os.name == "nt":
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
+_MAX_RESULT_BYTES = 32 * 1024 * 1024
+
+
 class _Task:
-    __slots__ = ("id", "script", "event", "ok", "data", "error", "cancelled", "completed")
+    __slots__ = (
+        "id",
+        "script",
+        "event",
+        "ok",
+        "data",
+        "error",
+        "cancelled",
+        "completed",
+    )
 
     def __init__(self, script: str) -> None:
         self.id = uuid.uuid4().hex
@@ -114,9 +137,11 @@ class Bridge:
         self.host = host
         self.port = port
 
-        self._pending: "queue.Queue[_Task]" = queue.Queue()
+        self._pending: dict[str, _Task] = {}
         self._inflight: dict[str, _Task] = {}
         self._lock = threading.Lock()
+        self._lifecycle_lock = threading.RLock()
+        self._generation = 0
 
         self._httpd: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
@@ -128,16 +153,15 @@ class Bridge:
     # ------------------------------------------------------------------ life
 
     def start(self) -> None:
+        with self._lifecycle_lock:
+            self._start_locked()
+
+    def _start_locked(self) -> None:
         if self._httpd is not None:
             return
-        # Refuse to share the port instead of failing mysteriously later.
-        #
-        # On Windows SO_REUSEADDR (which HTTPServer sets) permits a second
-        # bind to a port that is already listening -- unlike Unix, where it
-        # only helps with TIME_WAIT. So `maxctl` used to bind alongside a
-        # running MCP connector, Max kept talking to whoever bound first, and
-        # the CLI reported "3ds Max never contacted the bridge" while Max was
-        # right there. Probing first turns that into an actionable message.
+        # Windows SO_REUSEADDR lets a second bind attach to a live listener
+        # (Unix only covers TIME_WAIT); two servers would split Max's poll
+        # traffic silently.
         if self._port_in_use():
             raise MaxError(
                 f"port {self.port} is already in use by another process -- most "
@@ -146,6 +170,7 @@ class Bridge:
                 "stop the connector first or pass --port <free port>."
             )
         bridge = self
+        generation = self._generation
 
         class Handler(BaseHTTPRequestHandler):
             protocol_version = "HTTP/1.0"  # keep-alive off: trivial framing
@@ -154,12 +179,20 @@ class Bridge:
             def log_message(self, *_a) -> None:  # silence stderr spam
                 pass
 
+            def setup(self) -> None:
+                super().setup()
+                self.connection.settimeout(10.0)
+
             def do_GET(self) -> None:  # noqa: N802
-                if not self.path.startswith("/poll"):
+                if urlsplit(self.path).path != "/poll":
                     self.send_error(404)
                     return
-                bridge._last_poll = time.monotonic()
-                task = bridge._dequeue()
+                with bridge._lock:
+                    if generation != bridge._generation:
+                        self.send_error(503, "bridge generation ended")
+                        return
+                    bridge._last_poll = time.monotonic()
+                task = bridge._dequeue(generation)
                 if task is None:
                     self.send_response(200)
                     self.send_header("X-Task-Id", "")
@@ -173,17 +206,33 @@ class Bridge:
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()
                 self.wfile.write(body)
-                bridge._served += 1
+                with bridge._lock:
+                    bridge._served += 1
 
             def do_POST(self) -> None:  # noqa: N802
-                if not self.path.startswith("/result"):
+                if urlsplit(self.path).path != "/result":
                     self.send_error(404)
                     return
+                header = self.headers.get("Content-Length")
+                if header is None:
+                    self.send_error(411)
+                    return
                 try:
-                    length = int(self.headers.get("Content-Length") or 0)
+                    length = int(header)
                 except ValueError:
-                    length = 0
-                raw = self.rfile.read(length) if length else b""
+                    self.send_error(400, "invalid Content-Length")
+                    return
+                if length < 0 or length > _MAX_RESULT_BYTES:
+                    self.send_error(413 if length > _MAX_RESULT_BYTES else 400)
+                    return
+                try:
+                    raw = self.rfile.read(length) if length else b""
+                except (OSError, TimeoutError):
+                    self.send_error(408)
+                    return
+                if len(raw) != length:
+                    self.send_error(400, "incomplete result body")
+                    return
                 task_id = self.headers.get("X-Task-Id", "")
                 bridge._complete(task_id, raw)
                 payload = b'{"ack":true}'
@@ -193,7 +242,7 @@ class Bridge:
                 self.end_headers()
                 self.wfile.write(payload)
 
-        self._httpd = ThreadingHTTPServer((self.host, self.port), Handler)
+        self._httpd = _BridgeHTTPServer((self.host, self.port), Handler)
         self._httpd.daemon_threads = True
         self._thread = threading.Thread(
             target=self._httpd.serve_forever,
@@ -203,10 +252,31 @@ class Bridge:
         self._thread.start()
 
     def stop(self) -> None:
-        if self._httpd is not None:
-            self._httpd.shutdown()
-            self._httpd.server_close()
-            self._httpd = None
+        with self._lifecycle_lock:
+            # End the generation and wake callers before shutdown's polling
+            # delay. Old handlers can no longer take work during that delay.
+            with self._lock:
+                tasks = list(self._inflight.values())
+                self._inflight.clear()
+                tasks.extend(self._pending.values())
+                self._pending.clear()
+                self._generation += 1
+                self._last_poll = 0.0
+                for task in tasks:
+                    task.cancelled = True
+                    task.ok = False
+                    task.error = MaxRestarted(
+                        "bridge stopped while a request was pending; a task already "
+                        "taken by Max may still run. Inspect the scene before retrying."
+                    )
+                    task.event.set()
+            if self._httpd is not None:
+                self._httpd.shutdown()
+                self._httpd.server_close()
+                self._httpd = None
+            if self._thread is not None:
+                self._thread.join(timeout=2.0)
+                self._thread = None
 
     def _port_in_use(self) -> bool:
         """True if something is already accepting connections on our port."""
@@ -218,60 +288,76 @@ class Bridge:
 
     # --------------------------------------------------------------- queueing
 
-    def _dequeue(self) -> _Task | None:
-        while True:
-            try:
-                task = self._pending.get_nowait()
-            except queue.Empty:
+    def _dequeue(self, generation: int | None = None) -> _Task | None:
+        with self._lock:
+            if generation is not None and generation != self._generation:
                 return None
-            # The cancelled check and the _inflight write share one lock
-            # acquisition. Reading `cancelled` outside the lock left a window
-            # where a task was already being handed to Max but not yet visible
-            # in _inflight, so a timing-out caller saw "never taken".
-            with self._lock:
+            while self._pending:
+                task_id = next(iter(self._pending))
+                task = self._pending.pop(task_id)
                 if task.cancelled:
                     continue
                 self._inflight[task.id] = task
-            return task
+                return task
+            return None
+
+    @staticmethod
+    def _decode_result(raw: bytes) -> tuple[bool, object, str | None]:
+        """Decode outside the state lock; publication is a separate atomic step."""
+        try:
+            text = raw.decode("utf-8-sig").strip()
+            if not text:
+                return False, None, "empty response from 3ds Max"
+            payload = json.loads(text)
+        except (UnicodeDecodeError, ValueError, RecursionError) as exc:
+            return False, None, f"invalid result from 3ds Max: {type(exc).__name__}"
+        pending = [(payload, 0)]
+        while pending:
+            value, depth = pending.pop()
+            if depth > 64:
+                return (
+                    False,
+                    None,
+                    "invalid result from 3ds Max: nesting exceeds 64 levels",
+                )
+            if isinstance(value, dict):
+                pending.extend((item, depth + 1) for item in value.values())
+            elif isinstance(value, list):
+                pending.extend((item, depth + 1) for item in value)
+        if isinstance(payload, dict) and "ok" in payload:
+            if not isinstance(payload["ok"], bool):
+                return False, None, "invalid result envelope: ok must be a boolean"
+            return payload["ok"], payload.get("data"), payload.get("error")
+        return True, payload, None
 
     def _complete(self, task_id: str, raw: bytes) -> None:
         with self._lock:
-            task = self._inflight.pop(task_id, None)
-            if task is not None:
-                # Marked inside the lock, before parsing: a caller timing out in
-                # this window must not conclude that Max never answered.
-                task.completed = True
+            task = self._inflight.get(task_id)
         if task is None:
             return
-        # utf-8-sig: tolerate a BOM if the sender emits one anyway
-        text = raw.decode("utf-8-sig", "replace").strip()
-        if not text:
-            task.ok = False
-            task.error = "empty response from 3ds Max"
+        ok, data, error = self._decode_result(raw)
+        with self._lock:
+            # stop(), timeout, or another result may have finalized the task
+            # while decoding. Never resurrect it or overwrite its verdict.
+            if self._inflight.get(task_id) is not task or task.cancelled:
+                return
+            self._inflight.pop(task_id)
+            task.ok, task.data, task.error = ok, data, error
+            task.completed = True
             task.event.set()
-            return
-        try:
-            payload = json.loads(text)
-        except json.JSONDecodeError:
-            # Max encoded something we cannot read: surface it verbatim.
-            task.ok = False
-            task.error = f"unparsable result from 3ds Max: {text[:2000]}"
-            task.event.set()
-            return
-        if isinstance(payload, dict) and "ok" in payload:
-            task.ok = bool(payload.get("ok"))
-            task.data = payload.get("data")
-            task.error = payload.get("error")
-        else:
-            task.ok = True
-            task.data = payload
-        task.event.set()
-
-    # -------------------------------------------------------------------- api
 
     def call(self, script: str, timeout: float = 30.0) -> object:
         """Push a MAXScript snippet to Max and block until it answers."""
-        self.start()
+        if (
+            isinstance(timeout, bool)
+            or not isinstance(timeout, (int, float))
+            or not math.isfinite(timeout)
+            or timeout <= 0
+        ):
+            raise ValueError("timeout must be a finite positive number")
+        with self._lifecycle_lock:
+            self.start()
+            generation = self._generation
 
         # Max polls every 100 ms; give a cold start a moment before giving up,
         # otherwise the very first tool call always fails.
@@ -288,34 +374,29 @@ class Bridge:
                 )
 
         task = _Task(script)
-        self._pending.put(task)
+        with self._lifecycle_lock:
+            if self._generation != generation or self._httpd is None:
+                raise MaxRestarted("bridge stopped before the task could be queued")
+            with self._lock:
+                self._pending[task.id] = task
         if not task.event.wait(timeout):
-            # The script may well have finished -- only its POST failed. Max
-            # keeps undelivered results in an outbox and re-posts one per timer
-            # tick, so a short grace window turns that case back into a normal
-            # success instead of a scary "it may have changed the scene".
-            # Without this the outbox would be pointless: the task is popped
-            # from _inflight below, so a late result would find nobody home.
+            # POST may fail after Max already ran the script; the outbox
+            # re-delivers on the next tick. Without this wait the task is popped
+            # and the result discarded.
             if not task.event.wait(_LATE_GRACE_S):
-                # Re-check before giving up: the event can fire between the
-                # failed wait() returning and this line, and that result would
-                # otherwise be thrown away as a false "busy".
-                if not task.event.is_set():
-                    task.cancelled = True
-                    with self._lock:
-                        # Did Max actually take the task off the queue? That is
-                        # the only reliable signal: while a script runs, Max's
-                        # UI thread is blocked and cannot poll, so last_poll_age
-                        # grows for a perfectly healthy, busy Max. Using it to
-                        # mean "restarted" reported a running script as a crash.
-                        # `completed` covers the sibling race: the result may
-                        # have been popped for decoding but not yet published.
-                        was_taken = (
-                            self._inflight.pop(task.id, None) is not None
-                            or task.completed
-                        )
+                with self._lock:
+                    # Finalization competes with result publication and stop
+                    # under one lock, not a check-then-act event race.
+                    timed_out = not task.event.is_set()
+                    if timed_out:
+                        task.cancelled = True
+                        self._pending.pop(task.id, None)
+                        was_taken = self._inflight.pop(task.id, None) is not None
+                if timed_out:
                     self._raise_no_result(timeout, was_taken)
         if not task.ok:
+            if isinstance(task.error, MaxError):
+                raise task.error
             raise MaxError(task.error or "unknown MAXScript error")
         return task.data
 
@@ -364,11 +445,13 @@ class Bridge:
         return age is not None and age < 3.0
 
     def stats(self) -> dict:
-        return {
-            "endpoint": f"http://{self.host}:{self.port}",
-            "online": self.online,
-            "last_poll_age_s": None if self.last_poll_age is None else round(self.last_poll_age, 2),
-            "tasks_served": self._served,
-            "inflight": len(self._inflight),
-            "queued": self._pending.qsize(),
-        }
+        with self._lock:
+            age = None if self._last_poll <= 0 else time.monotonic() - self._last_poll
+            return {
+                "endpoint": f"http://{self.host}:{self.port}",
+                "online": age is not None and age < 3.0,
+                "last_poll_age_s": None if age is None else round(age, 2),
+                "tasks_served": self._served,
+                "inflight": len(self._inflight),
+                "queued": len(self._pending),
+            }

@@ -47,18 +47,31 @@ def fake_max() -> None:
             payload = {
                 "ok": True,
                 "data": [
-                    "count", 2,
-                    "truncated", False,
-                    "offset", 0,
-                    "items", [["name", "Box001", "class", "Box"], ["name", "Sphere002", "class", "Sphere"]],
+                    "count",
+                    2,
+                    "truncated",
+                    False,
+                    "offset",
+                    0,
+                    "items",
+                    [
+                        ["name", "Box001", "class", "Box"],
+                        ["name", "Sphere002", "class", "Sphere"],
+                    ],
                 ],
             }
         elif "bbox_min" in body:
-            payload = {"ok": True, "data": ["found", True, "name", "Box001", "children", ["a", "b"]]}
+            payload = {
+                "ok": True,
+                "data": ["found", True, "name", "Box001", "children", ["a", "b"]],
+            }
         elif body.lstrip().startswith("throw"):
             payload = {"ok": False, "error": "-- Runtime error: deliberate"}
         else:
-            payload = {"ok": True, "data": ["bridge_version", "0.1.0", "max_version", "2016"]}
+            payload = {
+                "ok": True,
+                "data": ["bridge_version", "0.1.0", "max_version", "2016"],
+            }
 
         raw = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(f"{BASE}/result", data=raw, method="POST")
@@ -71,7 +84,12 @@ def fake_max() -> None:
 
 
 def main() -> int:
+    global BASE
+    # Never collide with the connector already serving a real Max session.
+    tools.BRIDGE = Bridge(port=0)
     tools.BRIDGE.start()
+    tools.BRIDGE.port = tools.BRIDGE._httpd.server_port
+    BASE = f"http://127.0.0.1:{tools.BRIDGE.port}"
     t = threading.Thread(target=fake_max, daemon=True)
     t.start()
     time.sleep(0.3)

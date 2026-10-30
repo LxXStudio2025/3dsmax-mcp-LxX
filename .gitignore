@@ -36,3 +36,9 @@ NOTES.md
 # 换台机器内容就不同，对别人没有参考价值，还会暴露本地环境，所以只在本地生成：
 #   python tools/dump_api_snapshot.py   （或见 README 里的两条 maxctl 命令）
 tools/docs/api-snapshot-*.txt
+
+# --- 机器相关记录与一次性审查产物 ---
+# LOCAL_SETUP.md 记录的是本机盘符、账号路径和安装时间，换台机器即失效。
+# SOURCE_REVIEW.md 是某次审查的过程记录，结论已落进代码与 QUALITY.md。
+LOCAL_SETUP.md
+SOURCE_REVIEW.md

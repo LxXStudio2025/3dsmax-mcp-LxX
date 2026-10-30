@@ -50,7 +50,9 @@ def _emit(args: argparse.Namespace, value: Any) -> None:
         if value and isinstance(value[0], dict):
             # table-ish view for node rows
             cols = list(value[0].keys())
-            widths = {c: max(len(c), *(len(str(r.get(c, ""))) for r in value)) for c in cols}
+            widths = {
+                c: max(len(c), *(len(str(r.get(c, ""))) for r in value)) for c in cols
+            }
             print("  ".join(c.ljust(widths[c]) for c in cols))
             print("  ".join("-" * widths[c] for c in cols))
             for row in value:
@@ -120,8 +122,10 @@ def cmd_status(args: argparse.Namespace) -> int:
         _dump(info)
         stats = tools.BRIDGE.stats()
         print()
-        print(f"bridge    {stats['endpoint']}  online={stats['online']}  "
-              f"served={stats['tasks_served']}")
+        print(
+            f"bridge    {stats['endpoint']}  online={stats['online']}  "
+            f"served={stats['tasks_served']}"
+        )
     return 0
 
 
@@ -148,8 +152,10 @@ def cmd_doc(args: argparse.Namespace) -> int:
     if getattr(args, "json", False):
         _dump(res)
         return 0
-    print(f"{res['match_count']} page(s) mention '{args.keyword}' "
-          f"(searched {res['pages_searched']})")
+    print(
+        f"{res['match_count']} page(s) mention '{args.keyword}' "
+        f"(searched {res['pages_searched']})"
+    )
     for hit in res["results"]:
         print()
         print(f"--- {hit['title']}  ({hit['hits_in_page']} hits) ---")
@@ -169,7 +175,9 @@ def cmd_query(args: argparse.Namespace) -> int:
     if getattr(args, "json", False):
         _dump(res)
     else:
-        print(f"{res['count']} row(s)  truncated={res['truncated']}  offset={res['offset']}")
+        print(
+            f"{res['count']} row(s)  truncated={res['truncated']}  offset={res['offset']}"
+        )
         _emit(args, res["items"])
     return 0
 
@@ -216,7 +224,9 @@ def cmd_shot(args: argparse.Namespace) -> int:
 
 
 def cmd_file(args: argparse.Namespace) -> int:
-    _emit(args, tools.max_file_io(args.action, args.path, args.selected))
+    _emit(
+        args, tools.max_file_io(args.action, args.path, args.selected, args.overwrite)
+    )
     return 0
 
 
@@ -238,11 +248,13 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     if not stats["online"]:
         print()
         print("3ds Max is not polling. Checklist:")
-        print("  1. Is 3ds Max 2016 running?")
-        print("  2. Is max_mcp_bridge.ms in the startup folder, or did you run it once?")
+        print("  1. Is the Max release for this bridge port running?")
+        print(
+            "  2. Is max_mcp_bridge.ms in the startup folder, or did you run it once?"
+        )
         print("  3. MAXScript Listener (F11) should show: [max-mcp] ... polling ...")
         print("  4. Boot log tells you whether the file ever executed:")
-        print(r"     %TEMP%\max-mcp-boot.log")
+        print(r"     %TEMP%\maxmcp-boot-<year>.log")
         return 1
     try:
         info = tools.max_status()
@@ -316,9 +328,16 @@ def build_parser() -> argparse.ArgumentParser:
         prog="maxctl",
         description="Command line control for a running 3ds Max 2016 (same bridge as the MCP server).",
     )
-    p.add_argument("--port", type=int, default=None, help="bridge port (default 47100 or $MAXMCP_PORT)")
+    p.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        help="bridge port (default 47100 or $MAXMCP_PORT)",
+    )
     p.add_argument("--json", action="store_true", help="raw JSON output")
-    p.add_argument("--timeout", type=float, default=30.0, help="seconds to wait for Max")
+    p.add_argument(
+        "--timeout", type=float, default=30.0, help="seconds to wait for Max"
+    )
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sp = sub.add_parser("status", help="bridge + scene status")
@@ -384,6 +403,11 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("action", choices=["import", "export", "merge"])
     sp.add_argument("path")
     sp.add_argument("--selected", action="store_true")
+    sp.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="allow export to replace an existing file",
+    )
     sp.set_defaults(func=cmd_file)
 
     sp = sub.add_parser("repl", help="interactive MAXScript")
@@ -403,6 +427,8 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:
         print(f"!! {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
+    finally:
+        tools.BRIDGE.stop()
 
 
 if __name__ == "__main__":

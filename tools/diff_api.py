@@ -16,7 +16,6 @@ from __future__ import annotations
 import argparse
 import os
 import re
-import sys
 
 # Loose on purpose: class headers carry localized display names with NESTED
 # parentheses, e.g. "Standardmaterial(Standard (Legacy)) : material {2,0}".
@@ -62,8 +61,12 @@ def load(path: str) -> tuple[dict[str, set[str]], dict[str, str]]:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--a", required=True, help="older snapshot (e.g. api-snapshot-2016.txt)")
-    ap.add_argument("--b", required=True, help="newer snapshot (e.g. api-snapshot-2025.txt)")
+    ap.add_argument(
+        "--a", required=True, help="older snapshot (e.g. api-snapshot-2016.txt)"
+    )
+    ap.add_argument(
+        "--b", required=True, help="newer snapshot (e.g. api-snapshot-2025.txt)"
+    )
     ap.add_argument("--out", default="", help="markdown report path")
     ap.add_argument("--member-limit", type=int, default=400)
     args = ap.parse_args()
@@ -85,7 +88,10 @@ def main() -> int:
         gone = sorted(ma[k] for k in set(ma) - set(mb))
         new = sorted(mb[k] for k in set(mb) - set(ma))
         if gone or new:
-            member_diff[ca.get(cls) and cls or cls] = {"only_in_a": gone, "only_in_b": new}
+            member_diff[ca.get(cls) and cls or cls] = {
+                "only_in_a": gone,
+                "only_in_b": new,
+            }
 
     tot_a = sum(len(v) for v in ca.values())
     tot_b = sum(len(v) for v in cb.values())
@@ -93,7 +99,7 @@ def main() -> int:
     lines = [
         f"# API diff: {os.path.basename(args.a)} vs {os.path.basename(args.b)}",
         "",
-        "Generated from `showClass \"*.*\"` run inside each Max -- runtime truth, not docs.",
+        'Generated from `showClass "*.*"` run inside each Max -- runtime truth, not docs.',
         "",
         "## Totals",
         "",
@@ -142,7 +148,9 @@ def main() -> int:
         with open(args.out, "w", encoding="utf-8") as fh:
             fh.write(report)
         print(f"wrote {args.out}  ({len(report)} chars)")
-    print(f"classes A={len(ca)} B={len(cb)} common={len(common)} onlyA={len(only_a)} onlyB={len(only_b)}")
+    print(
+        f"classes A={len(ca)} B={len(cb)} common={len(common)} onlyA={len(only_a)} onlyB={len(only_b)}"
+    )
     print(f"members A={tot_a} B={tot_b} drift_classes={len(member_diff)}")
     return 0
 

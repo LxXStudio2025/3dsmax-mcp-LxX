@@ -24,20 +24,31 @@ import re
 import sys
 
 SKIP_HEADINGS = (
-    "example", "examples", "tutorial", "tutorials", "how to", "how-to",
-    "frequently asked", "faq", "what is new", "what's new", "sample",
-    "demonstrat", "walkthrough", "step by step",
+    "example",
+    "examples",
+    "tutorial",
+    "tutorials",
+    "how to",
+    "how-to",
+    "frequently asked",
+    "faq",
+    "what is new",
+    "what's new",
+    "sample",
+    "demonstrat",
+    "walkthrough",
+    "step by step",
 )
 KEEP_CODE_LINES = 3
 MAX_PARA = 120
-MAX_PAGE_CHARS = 420      # hard cap per page: signature + one short paragraph
+MAX_PAGE_CHARS = 420  # hard cap per page: signature + one short paragraph
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
 
 
 def condense(text: str) -> str:
     lines = text.splitlines()
     out: list[str] = []
-    skip_until_level = 0        # >0 means we are inside a skipped section
+    skip_until_level = 0  # >0 means we are inside a skipped section
     i = 0
     n = len(lines)
 
@@ -147,7 +158,7 @@ def main() -> int:
         with open(os.path.join(args.src, name), encoding="utf-8") as fh:
             raw = fh.read()
         slim = condense(raw)
-        if len(slim) < 80:          # nothing but a title -- drop it
+        if len(slim) < 80:  # nothing but a title -- drop it
             continue
         with open(os.path.join(args.dst, name), "w", encoding="utf-8") as fh:
             fh.write(slim + "\n")
@@ -165,7 +176,9 @@ def main() -> int:
         json.dump(index, fh, indent=1, ensure_ascii=False, sort_keys=True)
 
     ratio = (after / before * 100) if before else 0
-    print(f"pages={pages}  {before/1024/1024:.1f} MB -> {after/1024/1024:.1f} MB  ({ratio:.0f}%)")
+    print(
+        f"pages={pages}  {before / 1024 / 1024:.1f} MB -> {after / 1024 / 1024:.1f} MB  ({ratio:.0f}%)"
+    )
     print(f"out: {args.dst}")
     return 0
 

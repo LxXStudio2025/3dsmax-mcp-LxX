@@ -22,7 +22,6 @@ import html
 import json
 import os
 import re
-import sys
 import threading
 import time
 import urllib.request
@@ -34,7 +33,9 @@ UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
-OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs", f"maxscript-{VERSION}")
+OUT_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "docs", f"maxscript-{VERSION}"
+)
 
 _lock = threading.Lock()
 seen: set[str] = set()
@@ -86,7 +87,9 @@ def fetch_one(rel: str) -> tuple[str, str, str, list[str]] | None:
     children = []
     for m in re.findall(r'href="([^"]*GUID-[0-9A-Fa-f-]+\.html)"', page):
         # keep subdirectories; resolve relative ./ segments
-        child = os.path.normpath(os.path.join(os.path.dirname(rel), m)).replace("\\", "/")
+        child = os.path.normpath(os.path.join(os.path.dirname(rel), m)).replace(
+            "\\", "/"
+        )
         if child.startswith("../"):
             child = child.split("../", 1)[1]
         children.append(child)
@@ -117,9 +120,7 @@ def main() -> int:
 
         submit_next()
         while inflight:
-            finished, _ = futures.wait(
-                inflight, return_when=futures.FIRST_COMPLETED
-            )
+            finished, _ = futures.wait(inflight, return_when=futures.FIRST_COMPLETED)
             for fut in finished:
                 rel = inflight.pop(fut)
                 result = fut.result()
@@ -130,7 +131,9 @@ def main() -> int:
                     done["pages"] += 1
                     done["bytes"] += len(text)
                 slug = slug_of(rel)
-                with open(os.path.join(OUT_DIR, slug + ".md"), "w", encoding="utf-8") as fh:
+                with open(
+                    os.path.join(OUT_DIR, slug + ".md"), "w", encoding="utf-8"
+                ) as fh:
                     fh.write(f"# {title or slug}\n\n")
                     fh.write(f"<!-- source: {BASE}{rel} -->\n\n")
                     fh.write(text + "\n")
@@ -157,7 +160,7 @@ def main() -> int:
     dt = time.time() - t0
     print(
         f"\nDONE pages={done['pages']} errors={done['errors']} known={len(seen)} "
-        f"text={done['bytes']/1024/1024:.1f} MB in {dt:.0f}s -> {OUT_DIR}",
+        f"text={done['bytes'] / 1024 / 1024:.1f} MB in {dt:.0f}s -> {OUT_DIR}",
         flush=True,
     )
     return 0

@@ -25,7 +25,9 @@ WAIT_S = 240
 
 
 def wait_for_max() -> bool:
-    print(f"waiting up to {WAIT_S}s for Max to poll {tools.BRIDGE.host}:{tools.BRIDGE.port} ...")
+    print(
+        f"waiting up to {WAIT_S}s for Max to poll {tools.BRIDGE.host}:{tools.BRIDGE.port} ..."
+    )
     tools.BRIDGE.start()
     t0 = time.time()
     last_note = 0
@@ -61,10 +63,16 @@ def main() -> int:
     step("max_eval 1+1", tools.max_eval, "1+1")
     step("max_eval string+unicode", tools.max_eval, '"中文测试"')
     step("max_eval point3", tools.max_eval, "[10,20,30]")
-    step("max_eval array", tools.max_eval, "#(1, 2.5, \"x\", true, undefined)")
+    step("max_eval array", tools.max_eval, '#(1, 2.5, "x", true, undefined)')
 
-    step("max_create_object box", tools.max_create_object, "box", "MCP_TestBox",
-         [0, 0, 0], {"w": 50, "l": 50, "h": 50})
+    step(
+        "max_create_object box",
+        tools.max_create_object,
+        "box",
+        "MCP_TestBox",
+        [0, 0, 0],
+        {"w": 50, "l": 50, "h": 50},
+    )
     step("max_query_objects", tools.max_query_objects, "MCP_*", "", "", 10, 0)
     step("max_get_object", tools.max_get_object, "MCP_TestBox")
 
