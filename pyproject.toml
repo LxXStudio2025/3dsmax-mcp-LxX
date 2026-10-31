@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "max-mcp"
-version = "0.3.8"
+version = "0.3.9"
 description = "MCP server for Autodesk 3ds Max across releases, driven by a pure MAXScript bridge (no Python, PySide or pymxs inside Max)"
 readme = "README.md"
 requires-python = ">=3.10"

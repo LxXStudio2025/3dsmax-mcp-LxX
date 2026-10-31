@@ -320,6 +320,8 @@ class Bridge:
                     None,
                     "invalid result from 3ds Max: nesting exceeds 64 levels",
                 )
+            if isinstance(value, float) and not math.isfinite(value):
+                return False, None, "invalid result from 3ds Max: non-finite number"
             if isinstance(value, dict):
                 pending.extend((item, depth + 1) for item in value.values())
             elif isinstance(value, list):
@@ -327,7 +329,14 @@ class Bridge:
         if isinstance(payload, dict) and "ok" in payload:
             if not isinstance(payload["ok"], bool):
                 return False, None, "invalid result envelope: ok must be a boolean"
-            return payload["ok"], payload.get("data"), payload.get("error")
+            error = payload.get("error")
+            if error is not None and not isinstance(error, str):
+                return (
+                    False,
+                    None,
+                    "invalid result envelope: error must be a string or null",
+                )
+            return payload["ok"], payload.get("data"), error
         return True, payload, None
 
     def _complete(self, task_id: str, raw: bytes) -> None:

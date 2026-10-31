@@ -28,7 +28,7 @@ if __MAXMCP_TIMER != undefined do
     try ( __MAXMCP_TIMER.Dispose() ) catch()
 )
 
-global __MAXMCP_VER      = "0.3.8"
+global __MAXMCP_VER      = "0.3.9"
 -- One port per Max release so several sessions can run side by side without
 -- stealing each other's tasks: 2016 -> 47100, 2025 -> 47109, 2027 -> 47111.
 global __MAXMCP_YEAR     = ((((maxVersion())[1]) / 1000) + 1998) as integer

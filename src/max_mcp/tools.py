@@ -20,6 +20,7 @@ import time
 import uuid
 from typing import Any
 
+from . import __version__
 from .bridge import Bridge, MaxError
 from .maxscript import finite_number as _finite_number
 from .maxscript import mxs_list as mxs_list
@@ -152,7 +153,9 @@ def max_status() -> dict:
         "renderer", (renderers.current as string)
     )
 )"""
-    return flat_to_dict(call(script, timeout=15))
+    result = flat_to_dict(call(script, timeout=15))
+    result["server_version"] = __version__
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -1207,7 +1210,7 @@ def max_file_io(
     local __p = {mxs_str(target)}
     if not (doesFileExist __p) do throw ("file not found: " + __p)
     local __b = objects.count
-    local __success = mergeMAXFile __p #noPrompt
+    local __success = mergeMAXFile __p #autoRenameDups #renameMtlDups #neverReparent quiet:true
     if __success != true do throw ("merge failed: " + __p)
     #("ok", true, "added", (objects.count - __b), "path", __p)
 )"""
